@@ -25,7 +25,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description() -> LaunchDescription:
     # Get the launch directory
-    bringup_dir = get_package_share_directory('nav2_bringup')
+    bringup_dir = get_package_share_directory('leo_cnt_navstack_bringup')
 
     # Create the launch configuration variables
     namespace = LaunchConfiguration('namespace')
@@ -44,7 +44,7 @@ def generate_launch_description() -> LaunchDescription:
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config',
-        default_value=os.path.join(bringup_dir, 'rviz', 'nav2_default_view.rviz'),
+        default_value=os.path.join(bringup_dir, 'rviz', 'leo_cnt.rviz'),
         description='Full path to the RVIZ config file to use',
     )
 
@@ -65,6 +65,9 @@ def generate_launch_description() -> LaunchDescription:
             ('/tf', 'tf'),
             ('/tf_static', 'tf_static'),
         ],
+        additional_env={
+                'LD_PRELOAD': '/usr/lib/x86_64-linux-gnu/liboctomap.so'
+            }
     )
 
     exit_event_handler = RegisterEventHandler(
