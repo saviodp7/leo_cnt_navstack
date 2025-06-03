@@ -32,23 +32,23 @@ def generate_launch_description() -> LaunchDescription:
     # Get the launch directory
     bringup_dir = get_package_share_directory('leo_cnt_navstack_bringup')
     launch_dir = os.path.join(bringup_dir, 'launch')
-    sim_dir = get_package_share_directory('nav2_minimal_tb3_sim')
+    # sim_dir = get_package_share_directory('nav2_minimal_tb3_sim')
     drone_bringup_dir = get_package_share_directory('gz_drone_bringup')
 
     # Create the launch configuration variables
-    slam = LaunchConfiguration('slam')
+    # slam = LaunchConfiguration('slam')
     namespace = LaunchConfiguration('namespace')
     use_sim_time = LaunchConfiguration('use_sim_time')
     # params_file = LaunchConfiguration('params_file')
-    autostart = LaunchConfiguration('autostart')
+    # autostart = LaunchConfiguration('autostart')
     # use_respawn = LaunchConfiguration('use_respawn')
 
     # Launch configuration variables specific to simulation
     rviz_config_file = LaunchConfiguration('rviz_config_file')
-    use_simulator = LaunchConfiguration('use_simulator')
-    use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
+    # use_simulator = LaunchConfiguration('use_simulator')
+    # use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
     use_rviz = LaunchConfiguration('use_rviz')
-    headless = LaunchConfiguration('headless')
+    # headless = LaunchConfiguration('headless')
     # world = LaunchConfiguration('world')
     # pose = {
     #     'x': LaunchConfiguration('x_pose', default='-2.00'),
@@ -75,7 +75,7 @@ def generate_launch_description() -> LaunchDescription:
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time',
         default_value='true',
-        description='Use simulation (Gazebo) clock if true',
+        description='Use simulation (gz) clock if true',
     )
 
     # declare_params_file_cmd = DeclareLaunchArgument(
@@ -87,7 +87,7 @@ def generate_launch_description() -> LaunchDescription:
     declare_autostart_cmd = DeclareLaunchArgument(
         'autostart',
         default_value='true',
-        description='Automatically startup the nav2 stack',
+        description='Automatically startup the nav stack',
     )
 
     # declare_use_respawn_cmd = DeclareLaunchArgument(
@@ -167,65 +167,88 @@ def generate_launch_description() -> LaunchDescription:
         }.items(),
     )
 
-    bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
-        launch_arguments={
-            'namespace': namespace,
-            'slam': slam,
-            'map': map_yaml_file,
-            'graph': graph_filepath,
-            'use_sim_time': use_sim_time,
-            'params_file': params_file,
-            'autostart': autostart,
-            'use_composition': use_composition,
-            'use_respawn': use_respawn,
-            'use_keepout_zones': 'False',
-            'use_speed_zones': 'False',
-        }.items(),
-    )
+    # bringup_cmd = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
+    #     launch_arguments={
+    #         'namespace': namespace,
+    #         'slam': slam,
+    #         # 'map': map_yaml_file,
+    #         # 'graph': graph_filepath,
+    #         'use_sim_time': use_sim_time,
+    #         # 'params_file': params_file,
+    #         'autostart': autostart,
+    #         # 'use_composition': use_composition,
+    #         # 'use_respawn': use_respawn,
+    #         'use_keepout_zones': 'False',
+    #         'use_speed_zones': 'False',
+    #     }.items(),
+    #)
     # The SDF file for the world is a xacro file because we wanted to
     # conditionally load the SceneBroadcaster plugin based on whether we're
     # running in headless mode. But currently, the Gazebo command line doesn't
     # take SDF strings for worlds, so the output of xacro needs to be saved into
     # a temporary file and passed to Gazebo.
-    world_sdf = tempfile.mktemp(prefix='nav2_', suffix='.sdf')
-    world_sdf_xacro = ExecuteProcess(
-        cmd=['xacro', '-o', world_sdf, ['headless:=', headless], world])
-    gazebo_server = ExecuteProcess(
-        cmd=['gz', 'sim', '-r', '-s', world_sdf],
-        output='screen',
-        condition=IfCondition(use_simulator)
-    )
+    # world_sdf = tempfile.mktemp(prefix='nav2_', suffix='.sdf')
+    # world_sdf_xacro = ExecuteProcess(
+    #     cmd=['xacro', '-o', world_sdf, ['headless:=', headless], world])
+    # gazebo_server = ExecuteProcess(
+    #     cmd=['gz', 'sim', '-r', '-s', world_sdf],
+    #     output='screen',
+    #     condition=IfCondition(use_simulator)
+    # )
 
-    remove_temp_sdf_file = RegisterEventHandler(event_handler=OnShutdown(
-        on_shutdown=[
-            OpaqueFunction(function=lambda _: os.remove(world_sdf))
-        ]))
+    # remove_temp_sdf_file = RegisterEventHandler(event_handler=OnShutdown(
+    #     on_shutdown=[
+    #         OpaqueFunction(function=lambda _: os.remove(world_sdf))
+    #     ]))
 
-    gazebo_client = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ros_gz_sim'),
-                         'launch',
-                         'gz_sim.launch.py')
-        ),
-        condition=IfCondition(PythonExpression(
-            [use_simulator, ' and not ', headless])),
-        launch_arguments={'gz_args': ['-v4 -g ']}.items(),
-    )
+    # gazebo_client = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         os.path.join(get_package_share_directory('ros_gz_sim'),
+    #                      'launch',
+    #                      'gz_sim.launch.py')
+    #     ),
+    #     condition=IfCondition(PythonExpression(
+    #         [use_simulator, ' and not ', headless])),
+    #     launch_arguments={'gz_args': ['-v4 -g ']}.items(),
+    # )
 
-    gz_robot = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(sim_dir, 'launch', 'spawn_tb3.launch.py')),
-        launch_arguments={'namespace': namespace,
-                          'use_sim_time': use_sim_time,
-                          'robot_name': robot_name,
-                          'robot_sdf': robot_sdf,
-                          'x_pose': pose['x'],
-                          'y_pose': pose['y'],
-                          'z_pose': pose['z'],
-                          'roll': pose['R'],
-                          'pitch': pose['P'],
-                          'yaw': pose['Y']}.items())
+    # gz_robot = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         os.path.join(sim_dir, 'launch', 'spawn_tb3.launch.py')),
+    #     launch_arguments={'namespace': namespace,
+    #                       'use_sim_time': use_sim_time,
+    #                       'robot_name': robot_name,
+    #                       'robot_sdf': robot_sdf,
+    #                       'x_pose': pose['x'],
+    #                       'y_pose': pose['y'],
+    #                       'z_pose': pose['z'],
+    #                       'roll': pose['R'],
+    #                       'pitch': pose['P'],
+    #                       'yaw': pose['Y']}.items())
+
+    # TODO: eliminarlo per inserirlo nel giusto launchfile
+    start_octomap_server_cmd = Node(
+            package='octomap_server',
+            executable='octomap_server_node',
+            name='octomap_server',
+            output='screen',
+            remappings=[
+                ('cloud_in', 'uav/camera/depth/points')
+            ],
+            parameters=[{
+                'resolution': 0.03,
+                'frame_id': 'map',
+                'sensor_model/max_range': 10.0,
+                'ground_filter/distance': 0.6,
+                'point_cloud_min_x': -1.0,
+                'point_cloud_max_x': 20.0,
+                'point_cloud_min_y': -1.0,
+                'point_cloud_max_y': 10.0,
+                'point_cloud_min_z': -0.5,
+                'point_cloud_max_z': 3.5
+            }]
+        )
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -250,15 +273,16 @@ def generate_launch_description() -> LaunchDescription:
     # ld.add_action(declare_robot_sdf_cmd)
     # ld.add_action(declare_use_respawn_cmd)
 
-    ld.add_action(world_sdf_xacro)
-    ld.add_action(remove_temp_sdf_file)
-    ld.add_action(gz_robot)
-    ld.add_action(gazebo_server)
-    ld.add_action(gazebo_client)
+    # ld.add_action(world_sdf_xacro)
+    # ld.add_action(remove_temp_sdf_file)
+    # ld.add_action(gz_robot)
+    # ld.add_action(gazebo_server)
+    # ld.add_action(gazebo_client)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(rviz_cmd)
-    ld.add_action(bringup_cmd)
+    # ld.add_action(bringup_cmd)
+    ld.add_action(start_octomap_server_cmd)
 
     return ld
