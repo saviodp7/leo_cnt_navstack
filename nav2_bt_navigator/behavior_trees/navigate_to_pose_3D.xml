@@ -1,0 +1,10 @@
+<!--
+  This Behavior Tree replans the global path only when the goal is updated.
+-->
+
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <Navigate3DToPose goal="{goal}" result="{nav_result}" />
+  </BehaviorTree>
+</root>
+
