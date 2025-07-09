@@ -7,19 +7,22 @@ find_package(geometry_msgs REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(nav2_core REQUIRED)
 find_package(nav2_common REQUIRED)
-find_package(nav2_costmap_2d REQUIRED)
+# find_package(nav2_costmap_2d REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(nav2_util REQUIRED)
-find_package(nav_2d_msgs REQUIRED)
-find_package(nav_2d_utils REQUIRED)
+# find_package(nav_2d_msgs REQUIRED)
+# find_package(nav_2d_utils REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rcl_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(px4_msgs REQUIRED)
 
 nav2_package()
+
+include_directories(${px4_msgs_INCLUDE_DIRS})
 
 set(executable_name controller_server)
 
@@ -36,17 +39,18 @@ target_include_directories(${library_name}
 target_link_libraries(${library_name} PUBLIC
   ${geometry_msgs_TARGETS}
   nav2_core::nav2_core
-  nav2_costmap_2d::nav2_costmap_2d_core
+  # nav2_costmap_2d::nav2_costmap_2d_core
   ${nav2_msgs_TARGETS}
   nav2_util::nav2_util_core
-  ${nav_2d_msgs_TARGETS}
-  nav_2d_utils::conversions
-  nav_2d_utils::tf_help
+  # ${nav_2d_msgs_TARGETS}
+  # nav_2d_utils::conversions
+  # nav_2d_utils::tf_help
   pluginlib::pluginlib
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
   ${rcl_interfaces_TARGETS}
   tf2_ros::tf2_ros
+  ${px4_msgs_TARGETS}
 )
 target_link_libraries(${library_name} PRIVATE
   ${lifecycle_msgs_TARGETS}
@@ -81,7 +85,7 @@ target_link_libraries(simple_progress_checker PUBLIC
 )
 target_link_libraries(simple_progress_checker PRIVATE
   nav2_util::nav2_util_core
-  nav_2d_utils::conversions
+  # nav_2d_utils::conversions
   pluginlib::pluginlib
 )
 
@@ -101,7 +105,7 @@ target_link_libraries(pose_progress_checker PUBLIC
 target_link_libraries(pose_progress_checker PRIVATE
   angles::angles
   nav2_util::nav2_util_core
-  nav_2d_utils::conversions
+  # nav_2d_utils::conversions
   pluginlib::pluginlib
 )
 
@@ -114,7 +118,7 @@ target_include_directories(simple_goal_checker
 target_link_libraries(simple_goal_checker PUBLIC
   ${geometry_msgs_TARGETS}
   nav2_core::nav2_core
-  nav2_costmap_2d::nav2_costmap_2d_core
+  # nav2_costmap_2d::nav2_costmap_2d_core
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
   ${rcl_interfaces_TARGETS}
@@ -134,7 +138,7 @@ target_include_directories(stopped_goal_checker
 )
 target_link_libraries(stopped_goal_checker PUBLIC
   ${geometry_msgs_TARGETS}
-  nav2_costmap_2d::nav2_costmap_2d_core
+  # nav2_costmap_2d::nav2_costmap_2d_core
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
   ${rcl_interfaces_TARGETS}
@@ -154,7 +158,7 @@ target_include_directories(position_goal_checker
 target_link_libraries(position_goal_checker PUBLIC
   ${geometry_msgs_TARGETS}
   nav2_core::nav2_core
-  nav2_costmap_2d::nav2_costmap_2d_core
+  # nav2_costmap_2d::nav2_costmap_2d_core
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
   ${rcl_interfaces_TARGETS}
@@ -175,8 +179,6 @@ if(BUILD_TESTING)
 
   ament_find_gtest()
 
-  add_subdirectory(test)
-  add_subdirectory(plugins/test)
 endif()
 
 rclcpp_components_register_nodes(${library_name} "nav2_controller::ControllerServer")
@@ -206,11 +208,11 @@ ament_export_libraries(simple_progress_checker
 ament_export_dependencies(
   geometry_msgs
   nav2_core
-  nav2_costmap_2d
+  # nav2_costmap_2d
   nav2_msgs
   nav2_util
-  nav_2d_msgs
-  nav_2d_utils
+  # nav_2d_msgs
+  # nav_2d_utils
   pluginlib
   rclcpp
   rclcpp_lifecycle

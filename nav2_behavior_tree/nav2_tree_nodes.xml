@@ -4,6 +4,8 @@
   please refer to the groot_instructions.md and README.md respectively located in the
   nav2_behavior_tree package.
 -->
+
+<!-- TODO: Aggiungere Action nodes necessari --> 
 <root BTCPP_format="4">
   <TreeNodesModel>
     <!-- ############################### ACTION NODES ################################# -->

@@ -1,3 +1,5 @@
+# TODO: Rivedere parametri passati all'intero stack
+
 amcl:
   ros__parameters:
     alpha1: 0.2

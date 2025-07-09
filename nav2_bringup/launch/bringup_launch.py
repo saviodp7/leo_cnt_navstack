@@ -21,7 +21,7 @@ from launch.actions import (DeclareLaunchArgument, GroupAction, IncludeLaunchDes
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch_ros.actions import Node #, PushROSNamespace
+from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
 from nav2_common.launch import RewrittenYaml
 
@@ -131,9 +131,10 @@ def generate_launch_description() -> LaunchDescription:
         description='Automatically startup the nav2 stack',
     )
 
+    # TODO: Attivare compositions nodes
     declare_use_composition_cmd = DeclareLaunchArgument(
         'use_composition',
-        default_value='True',
+        default_value='False',
         description='Whether to use composed bringup',
     )
 
@@ -148,19 +149,19 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     # Specify the actions
-    bringup_cmd_group = GroupAction(
-        [
-            # PushROSNamespace(namespace),
-            # Node(
-            #     condition=IfCondition(use_composition),
-            #     name='nav2_container',
-            #     package='rclcpp_components',
-            #     executable='component_container_isolated',
-            #     parameters=[configured_params, {'autostart': autostart}],
-            #     arguments=['--ros-args', '--log-level', log_level],
-            #     remappings=remappings,
-            #     output='screen',
-            # ),
+    bringup_cmd_group = GroupAction([
+            Node(
+                condition=IfCondition(use_composition),
+                name='nav2_container',
+                package='rclcpp_components',
+                executable='component_container_isolated',
+                parameters=[configured_params, {'autostart': autostart}],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings,
+                output='screen',
+            ),
+
+            # TODO: Lanciare RTABMAP o eventuali altri slam
             # IncludeLaunchDescription(
             #     PythonLaunchDescriptionSource(
             #         os.path.join(launch_dir, 'slam_launch.py')
@@ -174,6 +175,8 @@ def generate_launch_description() -> LaunchDescription:
             #         'params_file': params_file,
             #     }.items(),
             # ),
+
+            # TODO: Lanciare RTABMAP o eventuali altri algoritmi per la localization
             # IncludeLaunchDescription(
             #     PythonLaunchDescriptionSource(
             #         os.path.join(launch_dir, 'localization_launch.py')
@@ -191,6 +194,7 @@ def generate_launch_description() -> LaunchDescription:
             #     }.items(),
             # ),
 
+            # TODO: Implementare eventuali keepout zones
             # IncludeLaunchDescription(
             #     PythonLaunchDescriptionSource(
             #         os.path.join(launch_dir, 'keepout_zone_launch.py')
@@ -207,6 +211,7 @@ def generate_launch_description() -> LaunchDescription:
             #     }.items(),
             # ),
 
+            # TODO: Implementare eventuali speed zones
             # IncludeLaunchDescription(
             #     PythonLaunchDescriptionSource(
             #         os.path.join(launch_dir, 'speed_zone_launch.py')
@@ -223,6 +228,7 @@ def generate_launch_description() -> LaunchDescription:
             #     }.items(),
             # ),
 
+            # RUNNING: navigation_launch.py
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(launch_dir, 'navigation_launch.py')

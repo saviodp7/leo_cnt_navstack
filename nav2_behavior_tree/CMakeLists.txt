@@ -44,6 +44,8 @@ target_link_libraries(${library_name} PUBLIC
   tf2_ros::tf2_ros
 )
 
+
+# TODO: Aggiungere plugin Navigazione 3d al Makefile
 add_library(nav2_compute_path_to_pose_action_bt_node SHARED plugins/action/compute_path_to_pose_action.cpp)
 list(APPEND plugin_libs nav2_compute_path_to_pose_action_bt_node)
 
@@ -289,20 +291,8 @@ install(DIRECTORY include/
   DESTINATION include/${PROJECT_NAME}
 )
 
-install(DIRECTORY test/utils/
-  DESTINATION include/${PROJECT_NAME}/nav2_behavior_tree/test/utils
-)
-
 install(FILES nav2_tree_nodes.xml DESTINATION share/${PROJECT_NAME})
 install(FILES ${GENERATED_DIR}/plugins_list.hpp DESTINATION include/${PROJECT_NAME}/${PROJECT_NAME})
-
-if(BUILD_TESTING)
-  find_package(ament_cmake_gtest REQUIRED)
-
-  ament_find_gtest()
-
-  add_subdirectory(test)
-endif()
 
 ament_export_include_directories(
   include/${PROJECT_NAME}

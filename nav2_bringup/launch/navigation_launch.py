@@ -41,15 +41,15 @@ def generate_launch_description() -> LaunchDescription:
 
     lifecycle_nodes = [
         'controller_server',
-        'smoother_server',
-        'planner_server',
-        'route_server',
-        'behavior_server',
-        'velocity_smoother',
-        'collision_monitor',
+        # 'smoother_server',
+        # 'planner_server',
+        # 'route_server',
+        # 'behavior_server',
+        # 'velocity_smoother',
+        # 'collision_monitor',
         'bt_navigator',
-        'waypoint_follower',
-        'docking_server',
+        # 'waypoint_follower',
+        # 'docking_server',
     ]
 
     # Map fully qualified names to relative ones so the node's namespace can be prepended.
@@ -125,16 +125,20 @@ def generate_launch_description() -> LaunchDescription:
         condition=IfCondition(PythonExpression(['not ', use_composition])),
         actions=[
             SetParameter('use_sim_time', use_sim_time),
-            # Node(
-            #     package='nav2_controller',
-            #     executable='controller_server',
-            #     output='screen',
-            #     respawn=use_respawn,
-            #     respawn_delay=2.0,
-            #     parameters=[configured_params],
-            #     arguments=['--ros-args', '--log-level', log_level],
-            #     remappings=remappings + [('cmd_vel', 'cmd_vel_nav')],
-            # ),
+
+            # RUNNING: controller_server.cpp
+            Node(
+                package='nav2_controller',
+                executable='controller_server',
+                output='screen',
+                respawn=use_respawn,
+                respawn_delay=2.0,
+                parameters=[configured_params],
+                arguments=['--ros-args', '--log-level', log_level],
+                remappings=remappings + [('cmd_vel', 'cmd_vel_nav')],
+            ),
+
+            # TODO: Implementare smoother
             # Node(
             #     package='nav2_smoother',
             #     executable='smoother_server',
@@ -146,6 +150,8 @@ def generate_launch_description() -> LaunchDescription:
             #     arguments=['--ros-args', '--log-level', log_level],
             #     remappings=remappings,
             # ),
+
+            # TODO: Implementare planner
             # Node(
             #     package='nav2_planner',
             #     executable='planner_server',
@@ -157,6 +163,8 @@ def generate_launch_description() -> LaunchDescription:
             #     arguments=['--ros-args', '--log-level', log_level],
             #     remappings=remappings,
             # ),
+
+            # TODO: Implementare route server
             # Node(
             #     package='nav2_route',
             #     executable='route_server',
@@ -167,6 +175,8 @@ def generate_launch_description() -> LaunchDescription:
             #     parameters=[configured_params, {'graph_filepath': graph_filepath}],
             #     arguments=['--ros-args', '--log-level', log_level],
             #     remappings=remappings),
+
+            # TODO: Implementare behavior server
             # Node(
             #     package='nav2_behaviors',
             #     executable='behavior_server',
@@ -178,6 +188,8 @@ def generate_launch_description() -> LaunchDescription:
             #     arguments=['--ros-args', '--log-level', log_level],
             #     remappings=remappings + [('cmd_vel', 'cmd_vel_nav')],
             # ),
+
+            # RUNNING: bt_navigator.cpp
             Node(
                 package='nav2_bt_navigator',
                 executable='bt_navigator',
@@ -189,6 +201,8 @@ def generate_launch_description() -> LaunchDescription:
                 arguments=['--ros-args', '--log-level', log_level],
                 remappings=remappings,
             ),
+
+            # TODO: Implementare waypoint follower
             # Node(
             #     package='nav2_waypoint_follower',
             #     executable='waypoint_follower',
@@ -200,6 +214,8 @@ def generate_launch_description() -> LaunchDescription:
             #     arguments=['--ros-args', '--log-level', log_level],
             #     remappings=remappings,
             # ),
+
+            # TODO: Implementare velocity smooter
             # Node(
             #     package='nav2_velocity_smoother',
             #     executable='velocity_smoother',
@@ -212,6 +228,8 @@ def generate_launch_description() -> LaunchDescription:
             #     remappings=remappings
             #     + [('cmd_vel', 'cmd_vel_nav')],
             # ),
+
+            # TODO: Implementare collision_monitor o inserirlo nel planner?
             # Node(
             #     package='nav2_collision_monitor',
             #     executable='collision_monitor',
@@ -223,6 +241,8 @@ def generate_launch_description() -> LaunchDescription:
             #     arguments=['--ros-args', '--log-level', log_level],
             #     remappings=remappings,
             # ),
+
+            # TODO: Implementare docking server
             # Node(
             #     package='opennav_docking',
             #     executable='opennav_docking',
@@ -234,17 +254,20 @@ def generate_launch_description() -> LaunchDescription:
             #     arguments=['--ros-args', '--log-level', log_level],
             #     remappings=remappings,
             # ),
-            # Node(
-            #     package='nav2_lifecycle_manager',
-            #     executable='lifecycle_manager',
-            #     name='lifecycle_manager_navigation',
-            #     output='screen',
-            #     arguments=['--ros-args', '--log-level', log_level],
-            #     parameters=[{'autostart': autostart}, {'node_names': lifecycle_nodes}],
-            # ),
+
+            # TODO: Integrare lifecycle manager
+            Node(
+                package='nav2_lifecycle_manager',
+                executable='lifecycle_manager',
+                name='lifecycle_manager_navigation',
+                output='screen',
+                arguments=['--ros-args', '--log-level', log_level],
+                parameters=[{'autostart': autostart}, {'node_names': lifecycle_nodes}],
+            ),
         ],
     )
 
+    # TODO: Integrazione use_composition
     load_composable_nodes = GroupAction(
         condition=IfCondition(use_composition),
         actions=[

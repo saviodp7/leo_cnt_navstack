@@ -24,7 +24,7 @@
 #include "nav2_util/string_utils.hpp"
 #include "nav2_util/robot_utils.hpp"
 #include "nav2_behavior_tree/bt_utils.hpp"
-
+// NOTE: Lista creata da Makefile
 #include "nav2_behavior_tree/plugins_list.hpp"
 
 using nav2_util::declare_parameter_if_not_declared;
@@ -37,7 +37,7 @@ BtNavigator::BtNavigator(rclcpp::NodeOptions options)
     options.automatically_declare_parameters_from_overrides(true)),
   class_loader_("nav2_core", "nav2_core::NavigatorBase")
 {
-  RCLCPP_INFO(get_logger(), "Creating");
+  RCLCPP_INFO(get_logger(), "Creating bt_navigator");
 
   declare_parameter_if_not_declared(
     this, "plugin_lib_names", rclcpp::ParameterValue(std::vector<std::string>{}));
@@ -57,6 +57,7 @@ BtNavigator::~BtNavigator()
 {
 }
 
+// NOTE: Alla configurazione del BtNavigator vengono instanziati i navigators che poi sono gestiti coi loro metodi
 nav2_util::CallbackReturn
 BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
 {
@@ -67,6 +68,7 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
     get_node_base_interface(), get_node_timers_interface());
   tf_->setCreateTimerInterface(timer_interface);
   tf_->setUsingDedicatedThread(true);
+  // NOTE: Tf2 listener
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_, this, false);
 
   global_frame_ = get_parameter("global_frame").as_string();
@@ -97,7 +99,8 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
 
   // Navigator defaults
   const std::vector<std::string> default_navigator_ids = {
-    "navigate_to_pose",
+    // RUNNING: Modifica navigator navigate_to_pose
+    "navigate_to_pose"
     // "navigate_through_poses"
   };
   const std::vector<std::string> default_navigator_types = {
@@ -118,6 +121,7 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
     }
   }
 
+  // TEST: Controllo corretto caricamento plugins
   // Load navigator plugins
   for (size_t i = 0; i != navigator_ids.size(); i++) {
     try {
