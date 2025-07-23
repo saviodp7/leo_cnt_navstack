@@ -230,27 +230,27 @@ def generate_launch_description() -> LaunchDescription:
     #                       'yaw': pose['Y']}.items())
 
     # TODO: Eliminare lancio dell'octomap per inserirlo nel giusto launchfile
-    # start_octomap_server_cmd = Node(
-    #         package='octomap_server',
-    #         executable='octomap_server_node',
-    #         name='octomap_server',
-    #         output='screen',
-    #         remappings=[
-    #             ('cloud_in', 'uav/camera/depth/points')
-    #         ],
-    #         parameters=[{
-    #             'resolution': 0.03,
-    #             'frame_id': 'map',
-    #             'sensor_model/max_range': 10.0,
-    #             'ground_filter/distance': 0.6,
-    #             'point_cloud_min_x': -1.0,
-    #             'point_cloud_max_x': 20.0,
-    #             'point_cloud_min_y': -1.0,
-    #             'point_cloud_max_y': 10.0,
-    #             'point_cloud_min_z': -0.5,
-    #             'point_cloud_max_z': 3.5
-    #         }]
-    #     )
+    start_octomap_server_cmd = Node(
+            package='octomap_server',
+            executable='octomap_server_node',
+            name='octomap_server',
+            output='screen',
+            remappings=[
+                ('cloud_in', 'uav/camera/depth/points')
+            ],
+            parameters=[{
+                'resolution': 0.03,
+                'frame_id': 'map',
+                'sensor_model/max_range': 10.0,
+                'ground_filter/distance': 0.6,
+                'point_cloud_min_x': -1.0,
+                'point_cloud_max_x': 20.0,
+                'point_cloud_min_y': -1.0,
+                'point_cloud_max_y': 10.0,
+                'point_cloud_min_z': -0.5,
+                'point_cloud_max_z': 3.5
+            }]
+        )
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -278,8 +278,8 @@ def generate_launch_description() -> LaunchDescription:
     # ld.add_action(gazebo_client)
 
     # Add the actions to launch all of the navigation nodes
-    # ld.add_action(start_robot_state_publisher_cmd)
-    # ld.add_action(rviz_cmd)
+    ld.add_action(start_robot_state_publisher_cmd)
+    ld.add_action(rviz_cmd)
     ld.add_action(bringup_cmd)
     # ld.add_action(start_octomap_server_cmd)
 

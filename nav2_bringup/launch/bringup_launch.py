@@ -131,13 +131,6 @@ def generate_launch_description() -> LaunchDescription:
         description='Automatically startup the nav2 stack',
     )
 
-    # TODO: Attivare compositions nodes
-    declare_use_composition_cmd = DeclareLaunchArgument(
-        'use_composition',
-        default_value='False',
-        description='Whether to use composed bringup',
-    )
-
     declare_use_respawn_cmd = DeclareLaunchArgument(
         'use_respawn',
         default_value='False',
@@ -150,17 +143,6 @@ def generate_launch_description() -> LaunchDescription:
 
     # Specify the actions
     bringup_cmd_group = GroupAction([
-            Node(
-                condition=IfCondition(use_composition),
-                name='nav2_container',
-                package='rclcpp_components',
-                executable='component_container_isolated',
-                parameters=[configured_params, {'autostart': autostart}],
-                arguments=['--ros-args', '--log-level', log_level],
-                remappings=remappings,
-                output='screen',
-            ),
-
             # TODO: Lanciare RTABMAP o eventuali altri slam
             # IncludeLaunchDescription(
             #     PythonLaunchDescriptionSource(
@@ -263,7 +245,6 @@ def generate_launch_description() -> LaunchDescription:
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
-    ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
     ld.add_action(declare_use_localization_cmd)

@@ -136,7 +136,7 @@ protected:
 //    * @param name Reference to the name to use for control if any valid available
 //    * @return bool Whether it found a valid controller to use
 //    */
-  bool findControllerId(const std::string & c_name, std::string & name);
+  // bool findControllerId(const std::string & c_name, std::string & name);
 
 //   /**
 //    * @brief Find the valid goal checker ID name for the specified parameter
@@ -268,12 +268,12 @@ protected:
   std::string controller_ids_concat_, current_controller_;
 
   double controller_frequency_;
-//   double min_x_velocity_threshold_;
-//   double min_y_velocity_threshold_;
-//   double min_theta_velocity_threshold_;
+  double min_x_velocity_threshold_;
+  double min_y_velocity_threshold_;
+  double min_theta_velocity_threshold_;
 
 //   double failure_tolerance_;
-  bool use_realtime_priority_;
+  bool use_realtime_priority_ = false;
 //   bool publish_zero_velocity_;
 //   rclcpp::Duration costmap_update_timeout_;
 
