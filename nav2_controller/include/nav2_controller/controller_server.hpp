@@ -55,6 +55,7 @@ public:
   using ControllerMap = std::unordered_map<std::string, nav2_core::Controller::Ptr>;
   using GoalCheckerMap = std::unordered_map<std::string, nav2_core::GoalChecker::Ptr>;
   using ProgressCheckerMap = std::unordered_map<std::string, nav2_core::ProgressChecker::Ptr>;
+  rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr waypoint_pub_;
 
   /**
    * @brief Constructor for nav2_controller::ControllerServer
@@ -281,7 +282,7 @@ protected:
 //   geometry_msgs::msg::PoseStamped end_pose_;
 
 //   // Last time the controller generated a valid command
-//   rclcpp::Time last_valid_cmd_time_;
+  rclcpp::Time last_valid_cmd_time_;
 
 //   // Current path container
 //   nav_msgs::msg::Path current_path_;

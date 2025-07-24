@@ -41,7 +41,6 @@ def generate_launch_description() -> LaunchDescription:
     use_sim_time = LaunchConfiguration('use_sim_time')
     params_file = LaunchConfiguration('params_file')
     autostart = LaunchConfiguration('autostart')
-    use_composition = LaunchConfiguration('use_composition')
     use_respawn = LaunchConfiguration('use_respawn')
     log_level = LaunchConfiguration('log_level')
     use_localization = LaunchConfiguration('use_localization')
@@ -170,7 +169,6 @@ def generate_launch_description() -> LaunchDescription:
             #         'use_sim_time': use_sim_time,
             #         'autostart': autostart,
             #         'params_file': params_file,
-            #         'use_composition': use_composition,
             #         'use_respawn': use_respawn,
             #         'container_name': 'nav2_container',
             #     }.items(),
@@ -187,7 +185,6 @@ def generate_launch_description() -> LaunchDescription:
             #         'keepout_mask': keepout_mask_yaml_file,
             #         'use_sim_time': use_sim_time,
             #         'params_file': params_file,
-            #         'use_composition': use_composition,
             #         'use_respawn': use_respawn,
             #         'container_name': 'nav2_container',
             #     }.items(),
@@ -204,7 +201,6 @@ def generate_launch_description() -> LaunchDescription:
             #         'speed_mask': speed_mask_yaml_file,
             #         'use_sim_time': use_sim_time,
             #         'params_file': params_file,
-            #         'use_composition': use_composition,
             #         'use_respawn': use_respawn,
             #         'container_name': 'nav2_container',
             #     }.items(),
@@ -221,7 +217,6 @@ def generate_launch_description() -> LaunchDescription:
                     'autostart': autostart,
                     'graph': graph_filepath,
                     'params_file': params_file,
-                    'use_composition': use_composition,
                     'use_respawn': use_respawn,
                     'container_name': 'nav2_container',
                 }.items(),

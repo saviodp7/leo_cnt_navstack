@@ -85,7 +85,7 @@ nav2_util::CallbackReturn
 ControllerServer::on_configure(const rclcpp_lifecycle::State & state)
 {
   auto node = shared_from_this();
-
+  waypoint_pub_ = this->create_publisher<px4_msgs::msg::TrajectorySetpoint>("/offboard/waypoint", 10);
   RCLCPP_INFO(get_logger(), "Configuring controller interface");
 
   // TODO: Aggiunta checkers
@@ -438,14 +438,11 @@ ControllerServer::on_shutdown(const rclcpp_lifecycle::State &)
 void ControllerServer::computeControl()
 {
   std::lock_guard<std::mutex> lock(dynamic_params_lock_);
-
   RCLCPP_INFO(get_logger(), "Received a goal, begin computing control effort.");
 
   try {
     auto goal = action_server_->get_current_goal();
-    if (!goal) {
-      return;  //  goal would be nullptr if action_server_ is deactivate.
-    }
+    if (!goal) return;  //  goal would be nullptr if action_server_ is deactivate.
 
     // std::string c_name = goal->controller_id;
     // std::string current_controller;
@@ -475,7 +472,7 @@ void ControllerServer::computeControl()
   //   setPlannerPath(goal->path);
   //   progress_checkers_[current_progress_checker_]->reset();
 
-  //   last_valid_cmd_time_ = now();
+    last_valid_cmd_time_ = now();
     rclcpp::WallRate loop_rate(controller_frequency_);
     while (rclcpp::ok()) {
       auto start_time = this->now();
@@ -511,27 +508,25 @@ void ControllerServer::computeControl()
 
   //     computeAndPublishVelocity();
 
-  // RUNNING:
-  // Pubblicazione su topic PX4 della prima posa del Path ricevuto
-    static auto goal_pub = create_publisher<px4_msgs::msg::TrajectorySetpoint>("/offboard/waypoint", 10);
-    const auto& pose = goal->path.poses[0].pose;
-    px4_msgs::msg::TrajectorySetpoint setpoint;
-    setpoint.position[0] = pose.position.x;
-    setpoint.position[1] = pose.position.y;
-    setpoint.position[2] = pose.position.z;
-    setpoint.yaw = 0;
-    goal_pub->publish(setpoint);
-    RCLCPP_INFO(get_logger(), "Setpoint published x=%.2f y=%.2f z=%.2f yaw=%.2f", setpoint.position[0], setpoint.position[1], setpoint.position[2], setpoint.yaw);
-    // Termina subito con successo
-    RCLCPP_INFO(get_logger(), "Goal published to topic. Succeeding.");
+      // RUNNING:
+      // Pubblicazione su topic PX4 della prima posa del Path ricevuto
+      const auto& pose = goal->path.poses[0].pose;
+      px4_msgs::msg::TrajectorySetpoint setpoint;
+      setpoint.position[0] = pose.position.x;
+      setpoint.position[1] = pose.position.y;
+      setpoint.position[2] = pose.position.z;
+      setpoint.yaw = 0;
 
-  // TODO: Implementazione check goal reached
-  //     if (isGoalReached()) {
+      waypoint_pub_->publish(setpoint);
+      RCLCPP_INFO(get_logger(), "📍 Setpoint published x=%.2f y=%.2f z=%.2f yaw=%.2f", setpoint.position[0], setpoint.position[1], setpoint.position[2], setpoint.yaw);
+
+      // TODO: Implementazione check goal reached
+      //     if (isGoalReached()) {
       if (true){
         RCLCPP_INFO(get_logger(), "Reached the goal!");
         break;
       }
-  // STOP RUNNING
+    // STOP RUNNING
 
       auto cycle_duration = this->now() - start_time;
       if (!loop_rate.sleep()) {
@@ -542,80 +537,80 @@ void ControllerServer::computeControl()
       }
     }
   }
-  //   catch (nav2_core::InvalidController & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::INVALID_CONTROLLER;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } catch (nav2_core::ControllerTFError & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::TF_ERROR;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } catch (nav2_core::NoValidControl & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::NO_VALID_CONTROL;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } catch (nav2_core::FailedToMakeProgress & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::FAILED_TO_MAKE_PROGRESS;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } catch (nav2_core::PatienceExceeded & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::PATIENCE_EXCEEDED;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } catch (nav2_core::InvalidPath & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::INVALID_PATH;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } catch (nav2_core::ControllerTimedOut & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::CONTROLLER_TIMED_OUT;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } catch (nav2_core::ControllerException & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::UNKNOWN;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // } 
-  // catch (std::exception & e) {
-  //   RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-  //   onGoalExit();
-  //   std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-  //   result->error_code = Action::Result::UNKNOWN;
-  //   result->error_msg = e.what();
-  //   action_server_->terminate_current(result);
-  //   return;
-  // }
+    catch (nav2_core::InvalidController & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::INVALID_CONTROLLER;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } catch (nav2_core::ControllerTFError & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::TF_ERROR;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } catch (nav2_core::NoValidControl & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::NO_VALID_CONTROL;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } catch (nav2_core::FailedToMakeProgress & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::FAILED_TO_MAKE_PROGRESS;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } catch (nav2_core::PatienceExceeded & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::PATIENCE_EXCEEDED;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } catch (nav2_core::InvalidPath & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::INVALID_PATH;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } catch (nav2_core::ControllerTimedOut & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::CONTROLLER_TIMED_OUT;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } catch (nav2_core::ControllerException & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::UNKNOWN;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  } 
+  catch (std::exception & e) {
+    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+    onGoalExit();
+    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
+    result->error_code = Action::Result::UNKNOWN;
+    result->error_msg = e.what();
+    action_server_->terminate_current(result);
+    return;
+  }
 
   RCLCPP_DEBUG(get_logger(), "Controller succeeded, setting result");
 
