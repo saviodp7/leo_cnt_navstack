@@ -207,20 +207,20 @@ def generate_launch_description() -> LaunchDescription:
             # ),
 
             # RUNNING: navigation_launch.py
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(launch_dir, 'navigation_launch.py')
-                ),
-                launch_arguments={
-                    'namespace': namespace,
-                    'use_sim_time': use_sim_time,
-                    'autostart': autostart,
-                    'graph': graph_filepath,
-                    'params_file': params_file,
-                    'use_respawn': use_respawn,
-                    'container_name': 'nav2_container',
-                }.items(),
-            ),
+            # IncludeLaunchDescription(
+            #     PythonLaunchDescriptionSource(
+            #         os.path.join(launch_dir, 'navigation_launch.py')
+            #     ),
+            #     launch_arguments={
+            #         'namespace': namespace,
+            #         'use_sim_time': use_sim_time,
+            #         'autostart': autostart,
+            #         'graph': graph_filepath,
+            #         'params_file': params_file,
+            #         'use_respawn': use_respawn,
+            #         'container_name': 'nav2_container',
+            #     }.items(),
+            # ),
         ]
     )
 

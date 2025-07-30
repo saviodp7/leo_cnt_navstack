@@ -1,27 +1,11 @@
-# Copyright (C) 2023 Open Source Robotics Foundation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""This is all-in-one launch script intended for use by nav2 developers."""
-
 import os
 import tempfile
+import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
-                            OpaqueFunction, RegisterEventHandler)
-from launch.conditions import IfCondition
+                            RegisterEventHandler)
 from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -29,39 +13,42 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description() -> LaunchDescription:
+    ld = LaunchDescription()
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
     launch_dir = os.path.join(bringup_dir, 'launch')
-
+    # TODO: Avvio pacchetto pubblicazione tf2 da PX4, convertire in nav2_slam
+    drone_bringup_dir = get_package_share_directory('gz_drone_bringup')
     # TODO: Avvio simulazione da launchfile
     # sim_dir = get_package_share_directory('nav2_minimal_tb3_sim')
-    
-    ### Avvio pacchetto pubblicazione tf2 da PX4
-    drone_bringup_dir = get_package_share_directory('gz_drone_bringup')
-    
-    # Create the launch configuration variables
+    param_file=os.path.join(bringup_dir, 'params', 'nav2_params.yaml')
 
-    # TODO: Integrazione launch slam con RTABMAP o eventuale algoritmo da param_file
-    # slam = LaunchConfiguration('slam')
-
-    namespace = LaunchConfiguration('namespace')
-    use_sim_time = LaunchConfiguration('use_sim_time')
-
-    # TODO: Integrazione parametri da param_file
     params_file = LaunchConfiguration('params_file')
+    declare_params_file_cmd = DeclareLaunchArgument(
+        'params_file',
+        default_value = param_file,
+        description='Full path to the ROS2 parameters file to use for all launched nodes',
+    )
 
-    # Launch configuration variables specific to simulation
-    use_rviz = LaunchConfiguration('use_rviz')
-    rviz_config_file = LaunchConfiguration('rviz_config_file')
+    # declare_use_simulator_cmd = DeclareLaunchArgument(
+    #     'use_simulator',
+    #     default_value='True',
+    #     description='Whether to start the simulator',
+    # )
 
-    # TODO: Avvio senza gz per scenario di gara 
-    # use_simulator = LaunchConfiguration('use_simulator')
+    # TODO: Dichiarazione mondo da lanciare
+    # declare_world_cmd = DeclareLaunchArgument(
+    #     'world',
+    #     default_value=os.path.join(sim_dir, 'worlds', 'tb3_sandbox.sdf.xacro'),
+    #     description='Full path to world model file to load',
+    # )
 
-    # TODO: Eventuale avvio con uno state publisher custom
-    # use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
-
-    # TODO: Parametro personalizzare mondo
-    # world = LaunchConfiguration('world')
+    # TODO: Dichiarazione sdf robot
+    # declare_robot_sdf_cmd = DeclareLaunchArgument(
+    #     'robot_sdf',
+    #     default_value=os.path.join(sim_dir, 'urdf', 'gz_waffle.sdf.xacro'),
+    #     description='Full path to robot sdf file to spawn the robot in gazebo',
+    # )
 
     # TODO: Personalizzazione posa iniziale
     # pose = {
@@ -73,103 +60,55 @@ def generate_launch_description() -> LaunchDescription:
     #     'Y': LaunchConfiguration('yaw', default='0.00'),
     # }
 
-    # TODO: Personalizzazione nome robot
-    # robot_name = LaunchConfiguration('robot_name')
+    param_file=os.path.join(bringup_dir, 'params', 'nav2_params.yaml')
+    with open(param_file, 'r') as file:
+        params = yaml.safe_load(file)
+        namespace = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('namespace', 'uav')
+        slam = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('slam', True)
+        use_sim_time = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_sim_time', False)
+        robot_name = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('robot_name', 'x500')
+        use_robot_state_pub = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_robot_state_pub', True)
+        use_rviz = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_rviz', True)
+        rviz_config_file = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('rviz_config_file', 'leo_cnt.rviz')
 
-    # TODO: Scelta robot sdf
-    # robot_sdf = LaunchConfiguration('robot_sdf')
+    urdf_file = os.path.join(get_package_share_directory(robot_name + '_description'), 'urdf', robot_name + '.urdf')
+    with open(urdf_file, 'r') as infp:
+        robot_description = infp.read()
 
-    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
-
-    # Declare the launch arguments
-    declare_namespace_cmd = DeclareLaunchArgument(
-        'namespace', default_value='', description='Top-level namespace'
-    )
-
-    declare_slam_cmd = DeclareLaunchArgument(
-        'slam', default_value='False', description='Whether run a SLAM'
-    )
-
-    declare_use_sim_time_cmd = DeclareLaunchArgument(
-        'use_sim_time',
-        default_value='False',
-        description='Use simulation (gz) clock if true',
-    )
-
-    # TODO: Creazione param_file
-    declare_params_file_cmd = DeclareLaunchArgument(
-        'params_file',
-        default_value=os.path.join(bringup_dir, 'params', 'nav2_params.yaml'),
-        description='Full path to the ROS2 parameters file to use for all launched nodes',
-    )
-
-    declare_rviz_config_file_cmd = DeclareLaunchArgument(
-        'rviz_config_file',
-        default_value=os.path.join(bringup_dir, 'rviz', 'leo_cnt.rviz'),
-        description='Full path to the RVIZ config file to use',
-    )
-
-    declare_use_simulator_cmd = DeclareLaunchArgument(
-        'use_simulator',
-        default_value='True',
-        description='Whether to start the simulator',
-    )
-
-    declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
-        'use_robot_state_pub',
-        default_value='True',
-        description='Whether to start the robot state publisher',
-    )
-
-    declare_use_rviz_cmd = DeclareLaunchArgument(
-        'use_rviz', default_value='True', description='Whether to start RVIZ'
-    )
-
-    # TODO: Dichiarazione mondo da lanciare
-    # declare_world_cmd = DeclareLaunchArgument(
-    #     'world',
-    #     default_value=os.path.join(sim_dir, 'worlds', 'tb3_sandbox.sdf.xacro'),
-    #     description='Full path to world model file to load',
-    # )
-
-    declare_robot_name_cmd = DeclareLaunchArgument(
-        'robot_name', default_value='drone', description='name of the robot'
-    )
-
-    # TODO: Dichiarazione sdf robot
-    # declare_robot_sdf_cmd = DeclareLaunchArgument(
-    #     'robot_sdf',
-    #     default_value=os.path.join(sim_dir, 'urdf', 'gz_waffle.sdf.xacro'),
-    #     description='Full path to robot sdf file to spawn the robot in gazebo',
-    # )
-
-    # TODO: Add If condition e specifica robot state publisher custom
-    start_robot_state_publisher_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(drone_bringup_dir, 'launch', 'tf_tree_init_depth.launch.py')),
-        )
-    # start_robot_state_publisher_cmd = Node(
-    #     condition=IfCondition(use_robot_state_pub),
-    #     package='robot_state_publisher',
-    #     executable='robot_state_publisher',
-    #     name='robot_state_publisher',
-    #     namespace=namespace,
-    #     output='screen',
-    #     parameters=[
-    #         {'use_sim_time': use_sim_time, 'robot_description': robot_description}
-    #     ],
-    #     remappings=remappings,
-    # )
-
-    rviz_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'rviz_launch.py')),
-        condition=IfCondition(use_rviz),
-        launch_arguments={
-            'namespace': namespace,
-            'use_sim_time': use_sim_time,
-            'rviz_config': rviz_config_file,
+    # TODO: Specifica robot state publisher custom
+    if use_robot_state_pub:
+        start_robot_tf_publisher_cmd = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(drone_bringup_dir, 'launch', 'tf_tree_init_depth.launch.py')),
+            launch_arguments={
+            # TODO: Modificare namespace gz_drone_bringup
+            'namespace': "", 
         }.items(),
-    )
+        )
+        ld.add_action(start_robot_tf_publisher_cmd)
+
+    if use_robot_state_pub:
+        start_robot_state_publisher_cmd = Node(
+                package='robot_state_publisher',
+                executable='robot_state_publisher',
+                name='robot_state_publisher',
+                output='screen',
+                parameters=[
+                    {'robot_description': robot_description}
+                ],
+                remappings=[('/robot_description', '/' + namespace + '/robot_description')],
+        )
+        ld.add_action(start_robot_state_publisher_cmd)
+
+    if use_rviz:
+        rviz_cmd = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(launch_dir, 'rviz_launch.py')),
+            launch_arguments={
+                'use_sim_time': str(use_sim_time),
+                'rviz_config': os.path.join(bringup_dir, 'rviz', rviz_config_file),
+            }.items(),
+        )
+        ld.add_action(rviz_cmd)
 
     # RUNNING: bringup_launch.py
     # TODO: Aggiungi tutti gli argomenti
@@ -179,8 +118,7 @@ def generate_launch_description() -> LaunchDescription:
             'namespace': namespace,
             # 'slam': slam,
             # 'map': map_yaml_file,
-            # 'graph': graph_filepath,
-            'use_sim_time': use_sim_time,
+            'use_sim_time': str(use_sim_time),
             'params_file': params_file,
             'use_keepout_zones': 'False',
             'use_speed_zones': 'False',
@@ -196,30 +134,29 @@ def generate_launch_description() -> LaunchDescription:
     # world_sdf = tempfile.mktemp(prefix='nav2_', suffix='.sdf')
     # world_sdf_xacro = ExecuteProcess(
     #     cmd=['xacro', '-o', world_sdf, ['headless:=', headless], world])
+    # if use_simulator:
     # gazebo_server = ExecuteProcess(
     #     cmd=['gz', 'sim', '-r', '-s', world_sdf],
     #     output='screen',
-    #     condition=IfCondition(use_simulator)
     # )
     # remove_temp_sdf_file = RegisterEventHandler(event_handler=OnShutdown(
     #     on_shutdown=[
     #         OpaqueFunction(function=lambda _: os.remove(world_sdf))
     #     ]))
+    # if use_gazebo and not headless:
     # gazebo_client = IncludeLaunchDescription(
     #     PythonLaunchDescriptionSource(
     #         os.path.join(get_package_share_directory('ros_gz_sim'),
     #                      'launch',
     #                      'gz_sim.launch.py')
     #     ),
-    #     condition=IfCondition(PythonExpression(
-    #         [use_simulator, ' and not ', headless])),
     #     launch_arguments={'gz_args': ['-v4 -g ']}.items(),
     # )
     # gz_robot = IncludeLaunchDescription(
     #     PythonLaunchDescriptionSource(
     #         os.path.join(sim_dir, 'launch', 'spawn_tb3.launch.py')),
     #     launch_arguments={'namespace': namespace,
-    #                       'use_sim_time': use_sim_time,
+    #                       'use_sim_time': str(use_sim_time),
     #                       'robot_name': robot_name,
     #                       'robot_sdf': robot_sdf,
     #                       'x_pose': pose['x'],
@@ -236,7 +173,7 @@ def generate_launch_description() -> LaunchDescription:
             name='octomap_server',
             output='screen',
             remappings=[
-                ('cloud_in', 'uav/camera/depth/points')
+                ('cloud_in', namespace + '/camera/depth/points')
             ],
             parameters=[{
                 'resolution': 0.03,
@@ -252,22 +189,8 @@ def generate_launch_description() -> LaunchDescription:
             }]
         )
 
-    # Create the launch description and populate
-    ld = LaunchDescription()
-
     # Declare the launch options
-    ld.add_action(declare_namespace_cmd)
-    ld.add_action(declare_slam_cmd)
-    # ld.add_action(declare_map_yaml_cmd)
-    # ld.add_action(declare_graph_file_cmd)
-    ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_params_file_cmd)
-    ld.add_action(declare_rviz_config_file_cmd)
-    ld.add_action(declare_use_simulator_cmd)
-    ld.add_action(declare_use_robot_state_pub_cmd)
-    ld.add_action(declare_use_rviz_cmd)
-    # ld.add_action(declare_world_cmd)
-    # ld.add_action(declare_robot_name_cmd)
     # ld.add_action(declare_robot_sdf_cmd)
     # ld.add_action(declare_use_respawn_cmd)
     # ld.add_action(world_sdf_xacro)
@@ -277,9 +200,7 @@ def generate_launch_description() -> LaunchDescription:
     # ld.add_action(gazebo_client)
 
     # Add the actions to launch all of the navigation nodes
-    ld.add_action(start_robot_state_publisher_cmd)
-    ld.add_action(rviz_cmd)
     ld.add_action(bringup_cmd)
-    # ld.add_action(start_octomap_server_cmd)
+    ld.add_action(start_octomap_server_cmd)
 
     return ld

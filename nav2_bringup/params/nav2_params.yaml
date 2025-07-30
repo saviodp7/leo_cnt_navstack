@@ -1,5 +1,9 @@
 # TODO: Rivedere parametri passati all'intero stack
 
+nav2_launcher:
+  ros__parameters:
+    namespace: "uav"
+
 amcl:
   ros__parameters:
     alpha1: 0.2
