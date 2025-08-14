@@ -74,7 +74,7 @@ def generate_launch_description() -> LaunchDescription:
         rviz_config_file = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('rviz_config_file', 'leo_cnt_nav2.rviz')
         use_perception_pipeline = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_perception_pipeline', True)
         use_simple_octomap_server  = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simple_octomap_server', False)
-        slam = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('slam', True)
+        slam = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('slam', False)
         use_simulator = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simulator', False)
         headless = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('headless', False)
         use_sim_time = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_sim_time', False)
@@ -121,7 +121,7 @@ def generate_launch_description() -> LaunchDescription:
         ld.add_action(rviz_cmd)
 
     # === PERCEPTION PIPELINE ===
-    # Include il launch file dedicato alla perception (NOVITÀ)
+    # Include il launch file dedicato alla perception
     if use_perception_pipeline:
         perception_pipeline_cmd = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -152,7 +152,6 @@ def generate_launch_description() -> LaunchDescription:
     )
     ld.add_action(bringup_cmd)
 
-    # TODO: Eliminare lancio dell'octomap per gestirlo da perception pipeline
     if use_simple_octomap_server:
         start_octomap_server_cmd = Node(
                 package='octomap_server',

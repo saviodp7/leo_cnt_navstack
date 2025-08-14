@@ -53,6 +53,7 @@ def generate_launch_description() -> LaunchDescription:
             .robot_description(file_path="config/x500.urdf.xacro")
             .robot_description_semantic(file_path="config/x500.srdf")
             .robot_description_kinematics(file_path="config/kinematics.yaml")
+            .robot_description_planning(file_path="config/joint_limits.yaml")
             .planning_scene_monitor(
                 publish_robot_description=False,
                 publish_robot_description_semantic=True,
@@ -107,87 +108,7 @@ def generate_launch_description() -> LaunchDescription:
     )
     ld.add_action(start_rviz_cmd)
 
-    # === OCTOMAP SERVER (3D Mapping) ===
-    # Fix: Usa PythonExpression per gestire correttamente namespace
-    # from launch.substitutions import PythonExpression
-    
-    # octomap_server_node = Node(
-    #     package='octomap_server',
-    #     executable='octomap_server_node',
-    #     name='octomap_server',
-    #     # Fix: Converti LaunchConfiguration in string per namespace
-    #     namespace=[namespace],
-    #     output='screen',
-    #     # Fix: Remapping corretti e consistenti
-    #     remappings=[
-    #         ('cloud_in', '/uav/camera/depth/points'),  # Path assoluto più sicuro
-    #         ('projected_map', 'projected_map'),
-    #         ('octomap_binary', 'octomap_binary'),  # Questo collegherà a MoveIt
-    #         ('octomap_full', 'octomap_full'),
-    #     ],
-    #     parameters=[{
-    #         'use_sim_time': use_sim_time,
-    #         'resolution': 0.05,
-    #         'frame_id': 'map',
-    #         # Fix: String statica per evitare problemi con LaunchConfiguration
-    #         'base_frame_id': 'uav/base_link',
-    #         'sensor_model/max_range': 10.0,
-    #         'sensor_model/min_range': 0.1,
-    #         'sensor_model/hit_prob': 0.7,
-    #         'sensor_model/miss_prob': 0.4,
-    #         'latch': True,
-    #         'ground_filter/distance': 0.6,
-    #         'ground_filter/angle': 0.15,
-    #         'ground_filter/plane_distance': 0.07,
-    #         'compress_map': True,
-    #         'incremental_2D_projection': False,
-    #         # Filtri per il point cloud - ottimizzati per drone
-    #         'point_cloud_min_x': -10.0,
-    #         'point_cloud_max_x': 10.0,
-    #         'point_cloud_min_y': -10.0,
-    #         'point_cloud_max_y': 10.0,
-    #         'point_cloud_min_z': -2.0,
-    #         'point_cloud_max_z': 5.0,
-    #         'occupancy_min_z': -1.0,
-    #         'occupancy_max_z': 3.0,
-    #     }],
-    # )
-    # ld.add_action(octomap_server_node)
 
-    # === OCCUPANCY MAP MONITOR (Bridge Octomap -> MoveIt) ===
-    # Questo è il componente mancante che collega octomap a MoveIt planning scene
-    # if moveit_available:
-    #     occupancy_map_monitor_node = Node(
-    #         package='moveit_ros_perception',
-    #         executable='moveit_ros_occupancy_map_monitor',
-    #         name='occupancy_map_monitor',
-    #         namespace=[namespace],  # Fix: usa lista
-    #         output='screen',
-    #         parameters=[
-    #             moveit_config.to_dict(),
-    #             {
-    #                 'use_sim_time': use_sim_time,
-    #                 # Parametri per il collegamento octomap
-    #                 'octomap_frame': 'map',
-    #                 'octomap_resolution': 0.05,
-    #                 'max_range': 10.0,
-    #                 'sensor_model/max_range': 10.0,
-    #                 'sensor_model/min_range': 0.1,
-    #                 # Filtri di processing
-    #                 'point_cloud_min_x': -10.0,
-    #                 'point_cloud_max_x': 10.0,
-    #                 'point_cloud_min_y': -10.0,
-    #                 'point_cloud_max_y': 10.0,
-    #                 'point_cloud_min_z': -2.0,
-    #                 'point_cloud_max_z': 5.0,
-    #             }
-    #         ],
-    #         remappings=[
-    #             ('octomap_binary', 'octomap_binary'),  # Riceve da octomap_server
-    #             ('planning_scene', 'planning_scene'),  # Invia a move_group
-    #         ]
-    #     )
-    #     ld.add_action(occupancy_map_monitor_node)
 
     # === POINT CLOUD PREPROCESSING (Opzionale ma utile) ===
     # Filtro per migliorare la qualità del point cloud
