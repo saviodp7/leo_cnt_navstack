@@ -8,13 +8,11 @@ Panels:
         - /Status1
         - /TF1/Frames1
         - /TF1/Tree1
-        - /PointCloud21
-        - /PointCloud21/Topic1
-        - /OccupancyGrid1/Topic1
-        - /MotionPlanning1
+        - /MotionPlanning1/Scene Geometry1
         - /MotionPlanning1/Scene Robot1
         - /MotionPlanning1/Planning Request1
-      Splitter Ratio: 0.479885071516037
+        - /MotionPlanning1/Planned Path1
+      Splitter Ratio: 0.5
     Tree Height: 299
   - Class: rviz_common/Selection
     Name: Selection
@@ -33,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -60,21 +58,21 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        base_link:
+          Value: true
+        camera_link:
+          Value: false
         map:
           Value: true
-        uav/base_link:
-          Value: true
-        uav/camera_link:
+        odom:
           Value: false
-        uav/odom:
-          Value: true
-        uav/rotor_0:
+        rotor_0:
           Value: false
-        uav/rotor_1:
+        rotor_1:
           Value: false
-        uav/rotor_2:
+        rotor_2:
           Value: false
-        uav/rotor_3:
+        rotor_3:
           Value: false
         x500_depth_0/OakD-Lite/base_link/StereoOV7251:
           Value: false
@@ -85,18 +83,18 @@ Visualization Manager:
       Show Names: false
       Tree:
         map:
-          uav/odom:
-            uav/base_link:
-              uav/camera_link:
+          odom:
+            base_link:
+              camera_link:
                 x500_depth_0/OakD-Lite/base_link/StereoOV7251:
                   {}
-              uav/rotor_0:
+              rotor_0:
                 {}
-              uav/rotor_1:
+              rotor_1:
                 {}
-              uav/rotor_2:
+              rotor_2:
                 {}
-              uav/rotor_3:
+              rotor_3:
                 {}
       Update Interval: 0
       Value: true
@@ -130,82 +128,14 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /uav/camera/depth/points
+        Value: /camera/depth/points
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Class: octomap_rviz_plugins/OccupancyGrid
-      Enabled: true
-      Max. Height Display: 3.4028234663852886e+38
-      Max. Octree Depth: 13
-      Min. Height Display: -3.4028234663852886e+38
-      Name: OccupancyGrid
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /octomap_binary
-      Value: true
-      Voxel Alpha: 1
-      Voxel Coloring: Z-Axis
-      Voxel Rendering: Occupied Voxels
-    - Alpha: 1
-      Class: rviz_default_plugins/RobotModel
-      Collision Enabled: false
-      Description File: ""
-      Description Source: Topic
-      Description Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /uav/robot_description
-      Enabled: true
-      Links:
-        All Links Enabled: true
-        Expand Joint Details: false
-        Expand Link Details: false
-        Expand Tree: false
-        Link Tree Style: Links in Alphabetic Order
-        uav/base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        uav/rotor_0:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        uav/rotor_1:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        uav/rotor_2:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        uav/rotor_3:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-      Mass Properties:
-        Inertia: false
-        Mass: false
-      Name: RobotModel
-      TF Prefix: ""
-      Update Interval: 0
-      Value: true
-      Visual Enabled: true
     - Acceleration_Scaling_Factor: 0.1
       Class: moveit_rviz_plugin/MotionPlanning
       Enabled: true
-      Move Group Namespace: uav
+      Move Group Namespace: ""
       MoveIt_Allow_Approximate_IK: false
       MoveIt_Allow_External_Program: false
       MoveIt_Allow_Replanning: false
@@ -216,13 +146,13 @@ Visualization Manager:
       MoveIt_Use_Constraint_Aware_IK: false
       MoveIt_Workspace:
         Center:
-          X: 0
-          Y: 0
-          Z: 0
+          X: 9.5
+          Y: 4
+          Z: 1.5
         Size:
-          X: 2
-          Y: 2
-          Z: 2
+          X: 21
+          Y: 10
+          Z: 4
       Name: MotionPlanning
       Planned Path:
         Color Enabled: false
@@ -233,40 +163,40 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          uav/base_link:
+          base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_0:
+          rotor_0:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_1:
+          rotor_1:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_2:
+          rotor_2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_3:
+          rotor_3:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-        Loop Animation: false
+        Loop Animation: true
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
         Show Robot Collision: false
         Show Robot Visual: true
-        Show Trail: false
-        State Display Time: 3x
-        Trail Step Size: 1
-        Trajectory Topic: display_planned_path
+        Show Trail: true
+        State Display Time: 1s
+        Trail Step Size: 10
+        Trajectory Topic: /display_planned_path
         Use Sim Time: false
       Planning Metrics:
         Payload: 1
@@ -281,13 +211,13 @@ Visualization Manager:
         Goal State Color: 250; 128; 0
         Interactive Marker Size: 0
         Joint Violation Color: 255; 0; 255
-        Planning Group: x500_virtual_move_group
-        Query Goal State: false
+        Planning Group: x500_group
+        Query Goal State: true
         Query Start State: false
         Show Workspace: false
         Start State Alpha: 1
         Start State Color: 0; 255; 0
-      Planning Scene Topic: uav/monitored_planning_scene
+      Planning Scene Topic: /monitored_planning_scene
       Robot Description: robot_description
       Scene Geometry:
         Scene Alpha: 0.8999999761581421
@@ -304,36 +234,36 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          uav/base_link:
+          base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_0:
+          rotor_0:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_1:
+          rotor_1:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_2:
+          rotor_2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          uav/rotor_3:
+          rotor_3:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
         Robot Alpha: 1
         Show Robot Collision: false
-        Show Robot Visual: false
+        Show Robot Visual: true
       Value: true
-      Velocity_Scaling_Factor: 0.1
+      Velocity_Scaling_Factor: 0
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -380,25 +310,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 9.186951637268066
+      Distance: 15.89558219909668
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 8.558845520019531
-        Y: 6.645989894866943
-        Z: 5.071416854858398
+        X: 4.778960227966309
+        Y: 1.4691855907440186
+        Z: 0.23518234491348267
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5939076542854309
+      Pitch: 0.668907880783081
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.237013578414917
+      Yaw: 1.4770103693008423
     Saved: ~
 Window Geometry:
   Displays:
@@ -410,7 +340,7 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000002ba00000379fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b000001b4000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000002c3000000c30000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000003c005400720061006a006500630074006f007200790020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000003f00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000001f5000001bf0000016900ffffff000000010000010f000002b4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000002b4000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d00650100000000000007800000025300fffffffb0000000800540069006d00650100000000000004500000000000000000000004c00000037900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000003f200000379fc020000000cfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b000001b4000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d00610067006500000002c3000000c30000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000003f00fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000001f5000001bf0000016a00ffffff000000010000010f000002b4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000002b4000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d00650100000000000007800000025300fffffffb0000000800540069006d00650100000000000004500000000000000000000003880000037900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:

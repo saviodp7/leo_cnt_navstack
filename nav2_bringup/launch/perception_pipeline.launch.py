@@ -16,12 +16,11 @@ def generate_launch_description() -> LaunchDescription:
     namespace = LaunchConfiguration('namespace')
     robot_name = LaunchConfiguration('robot_name')
     use_sim_time = LaunchConfiguration('use_sim_time')
-    moveit_config_package = LaunchConfiguration('moveit_config_package')
     
     # === LAUNCH ARGUMENTS ===
     namespace_arg = DeclareLaunchArgument(
         'namespace',
-        default_value='uav',
+        default_value='',
         description='Robot namespace'
     )
     
@@ -37,12 +36,6 @@ def generate_launch_description() -> LaunchDescription:
         description='Use simulation (Gazebo) clock if true'
     )
     
-    moveit_config_package_arg = DeclareLaunchArgument(
-        'moveit_config_package',
-        default_value='x500_moveit_config',
-        description='MoveIt config package name'
-    )
-
     # === MOVEIT CONFIGURATION ===
     moveit_available = False
     moveit_config = None
@@ -53,7 +46,7 @@ def generate_launch_description() -> LaunchDescription:
             .robot_description(file_path="config/x500.urdf.xacro")
             .robot_description_semantic(file_path="config/x500.srdf")
             .robot_description_kinematics(file_path="config/kinematics.yaml")
-            .robot_description_planning(file_path="config/joint_limits.yaml")
+            .joint_limits(file_path="config/joint_limits.yaml")
             .planning_scene_monitor(
                 publish_robot_description=False,
                 publish_robot_description_semantic=True,
@@ -79,7 +72,7 @@ def generate_launch_description() -> LaunchDescription:
             package="moveit_ros_move_group",
             executable="move_group",
             name="move_group",
-            namespace=[namespace],  # Fix: usa lista
+            # namespace=[namespace],  # Fix: usa lista
             output="screen",
             parameters=[
                 moveit_config.to_dict(),
@@ -119,8 +112,8 @@ def generate_launch_description() -> LaunchDescription:
     #     namespace=[namespace],  # Fix: usa lista
     #     output='screen',
     #     remappings=[
-    #         ('input', '/uav/camera/depth/points'),
-    #         ('output', '/uav/camera/depth/points_filtered'),
+    #         ('input', '/camera/depth/points'),
+    #         ('output', '/camera/depth/points_filtered'),
     #     ],
     #     parameters=[{
     #         'use_sim_time': use_sim_time,
@@ -138,6 +131,5 @@ def generate_launch_description() -> LaunchDescription:
     ld.add_action(namespace_arg)
     ld.add_action(robot_name_arg)
     ld.add_action(use_sim_time_arg)
-    ld.add_action(moveit_config_package_arg)
 
     return ld

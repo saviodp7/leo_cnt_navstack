@@ -66,12 +66,12 @@ def generate_launch_description() -> LaunchDescription:
     param_file=os.path.join(bringup_dir, 'params', 'nav2_params.yaml')
     with open(param_file, 'r') as file:
         params = yaml.safe_load(file)
-        namespace = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('namespace', 'uav')
+        namespace = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('namespace', '')
         robot_name = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('robot_name', 'x500')
         use_robot_description = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_robot_description', True)
-        use_robot_state_pub = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_robot_state_pub', True)
+        use_robot_tf_pub = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_robot_state_pub', True)
         use_simple_rviz = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simple_rviz', False)
-        rviz_config_file = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('rviz_config_file', 'leo_cnt_nav2.rviz')
+        rviz_config_file = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('rviz_config_file', 'leo_cnt_nav2_moveit.rviz')
         use_perception_pipeline = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_perception_pipeline', True)
         use_simple_octomap_server  = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simple_octomap_server', False)
         slam = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('slam', False)
@@ -80,8 +80,8 @@ def generate_launch_description() -> LaunchDescription:
         use_sim_time = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_sim_time', False)
 
     # === ROBOT DESCRIPTION ===
-    urdf_file = os.path.join(get_package_share_directory(robot_name + '_description'), 'urdf', robot_name + '.urdf.xacro')
-    robot_description = Command(['xacro ', urdf_file,' robot_ns:=', namespace])
+    urdf_file = os.path.join(get_package_share_directory(robot_name + '_description'), 'urdf', robot_name + '.urdf')
+    robot_description = Command(['xacro ', urdf_file])
     if use_robot_description:
         start_robot_state_publisher_cmd = Node(
                 package='robot_state_publisher',
@@ -91,13 +91,12 @@ def generate_launch_description() -> LaunchDescription:
                 parameters=[
                     {'robot_description': robot_description}
                 ],
-                remappings=[('/robot_description', '/' + namespace + '/robot_description')],
         )
         ld.add_action(start_robot_state_publisher_cmd)
 
     # === ROBOT STATE PUBLISHER ===
     # TODO: Specifica robot state publisher custom
-    if use_robot_state_pub:
+    if use_robot_tf_pub:
         start_robot_tf_publisher_cmd = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(drone_bringup_dir, 'launch', 'tf_tree_init_depth.launch.py')),
@@ -136,45 +135,45 @@ def generate_launch_description() -> LaunchDescription:
         )
         ld.add_action(perception_pipeline_cmd)
 
-    # === NAV2 BRINGUP ===
-    # TODO: Aggiungi tutti gli argomenti
-    bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
-        launch_arguments={
-            'namespace': namespace,
-            # 'slam': slam,
-            # 'map': map_yaml_file,
-            'use_sim_time': str(use_sim_time),
-            'params_file': params_file,
-            'use_keepout_zones': 'False',
-            'use_speed_zones': 'False',
-        }.items(),
-    )
-    ld.add_action(bringup_cmd)
+    # # === NAV2 BRINGUP ===
+    # # TODO: Aggiungi tutti gli argomenti
+    # bringup_cmd = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
+    #     launch_arguments={
+    #         'namespace': namespace,
+    #         # 'slam': slam,
+    #         # 'map': map_yaml_file,
+    #         'use_sim_time': str(use_sim_time),
+    #         'params_file': params_file,
+    #         'use_keepout_zones': 'False',
+    #         'use_speed_zones': 'False',
+    #     }.items(),
+    # )
+    # ld.add_action(bringup_cmd)
 
-    if use_simple_octomap_server:
-        start_octomap_server_cmd = Node(
-                package='octomap_server',
-                executable='octomap_server_node',
-                name='octomap_server',
-                output='screen',
-                remappings=[
-                    ('cloud_in', 'uav/camera/depth/points')
-                ],
-                parameters=[{
-                    'resolution': 0.03,
-                    'frame_id': 'map',
-                    'sensor_model/max_range': 10.0,
-                    'ground_filter/distance': 0.6,
-                    'point_cloud_min_x': -1.0,
-                    'point_cloud_max_x': 20.0,
-                    'point_cloud_min_y': -1.0,
-                    'point_cloud_max_y': 10.0,
-                    'point_cloud_min_z': -0.5,
-                    'point_cloud_max_z': 3.5
-                }]
-            )
-        ld.add_action(start_octomap_server_cmd)
+    # if use_simple_octomap_server:
+    #     start_octomap_server_cmd = Node(
+    #             package='octomap_server',
+    #             executable='octomap_server_node',
+    #             name='octomap_server',
+    #             output='screen',
+    #             remappings=[
+    #                 ('cloud_in', 'uav/camera/depth/points')
+    #             ],
+    #             parameters=[{
+    #                 'resolution': 0.03,
+    #                 'frame_id': 'map',
+    #                 'sensor_model/max_range': 10.0,
+    #                 'ground_filter/distance': 0.6,
+    #                 'point_cloud_min_x': -1.0,
+    #                 'point_cloud_max_x': 20.0,
+    #                 'point_cloud_min_y': -1.0,
+    #                 'point_cloud_max_y': 10.0,
+    #                 'point_cloud_min_z': -0.5,
+    #                 'point_cloud_max_z': 3.5
+    #             }]
+    #         )
+    #     ld.add_action(start_octomap_server_cmd)
 
     # TODO: Modifica per caricare mondo custom
     # === SIMULATION ===
