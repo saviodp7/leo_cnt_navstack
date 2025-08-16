@@ -73,7 +73,6 @@ def generate_launch_description() -> LaunchDescription:
         use_simple_rviz = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simple_rviz', False)
         rviz_config_file = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('rviz_config_file', 'leo_cnt_nav2_moveit.rviz')
         use_perception_pipeline = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_perception_pipeline', True)
-        use_simple_octomap_server  = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simple_octomap_server', False)
         slam = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('slam', False)
         use_simulator = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simulator', False)
         headless = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('headless', False)
@@ -150,30 +149,6 @@ def generate_launch_description() -> LaunchDescription:
     #     }.items(),
     # )
     # ld.add_action(bringup_cmd)
-
-    # if use_simple_octomap_server:
-    #     start_octomap_server_cmd = Node(
-    #             package='octomap_server',
-    #             executable='octomap_server_node',
-    #             name='octomap_server',
-    #             output='screen',
-    #             remappings=[
-    #                 ('cloud_in', 'uav/camera/depth/points')
-    #             ],
-    #             parameters=[{
-    #                 'resolution': 0.03,
-    #                 'frame_id': 'map',
-    #                 'sensor_model/max_range': 10.0,
-    #                 'ground_filter/distance': 0.6,
-    #                 'point_cloud_min_x': -1.0,
-    #                 'point_cloud_max_x': 20.0,
-    #                 'point_cloud_min_y': -1.0,
-    #                 'point_cloud_max_y': 10.0,
-    #                 'point_cloud_min_z': -0.5,
-    #                 'point_cloud_max_z': 3.5
-    #             }]
-    #         )
-    #     ld.add_action(start_octomap_server_cmd)
 
     # TODO: Modifica per caricare mondo custom
     # === SIMULATION ===

@@ -65,18 +65,14 @@ def generate_launch_description() -> LaunchDescription:
         print(f"[ERROR] MoveIt config not available: {e}")
         moveit_available = False
 
-    # === MOVEIT COMPONENTS ===
     if moveit_available:
-        # Move Group Node (Core MoveIt Planning)
         move_group_node = Node(
             package="moveit_ros_move_group",
             executable="move_group",
             name="move_group",
-            # namespace=[namespace],  # Fix: usa lista
             output="screen",
             parameters=[
                 moveit_config.to_dict(),
-                # {'use_sim_time': use_sim_time}
             ],
             arguments=["--ros-args", "--log-level", "info"],
         )
@@ -100,32 +96,6 @@ def generate_launch_description() -> LaunchDescription:
     ]
     )
     ld.add_action(start_rviz_cmd)
-
-
-
-    # === POINT CLOUD PREPROCESSING (Opzionale ma utile) ===
-    # Filtro per migliorare la qualità del point cloud
-    # pointcloud_filter_node = Node(
-    #     package='pcl_ros',
-    #     executable='voxel_grid_filter_node',
-    #     name='pointcloud_filter',
-    #     namespace=[namespace],  # Fix: usa lista
-    #     output='screen',
-    #     remappings=[
-    #         ('input', '/camera/depth/points'),
-    #         ('output', '/camera/depth/points_filtered'),
-    #     ],
-    #     parameters=[{
-    #         'use_sim_time': use_sim_time,
-    #         'leaf_size': 0.03,  # Voxel size per downsampling
-    #         'filter_field_name': 'z',
-    #         'filter_limit_min': -2.0,
-    #         'filter_limit_max': 5.0,
-    #         'filter_limit_negative': False,
-    #     }]
-    # )
-    # Comenta se non hai pcl_ros installato
-    # ld.add_action(pointcloud_filter_node)
 
     # === ADD ARGUMENTS ===
     ld.add_action(namespace_arg)
