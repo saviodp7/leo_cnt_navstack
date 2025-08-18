@@ -45,7 +45,6 @@ def generate_launch_description() -> LaunchDescription:
             MoveItConfigsBuilder('x500')
             .robot_description(file_path="config/x500.urdf.xacro")
             .robot_description_semantic(file_path="config/x500.srdf")
-            .robot_description_kinematics(file_path="config/kinematics.yaml")
             .joint_limits(file_path="config/joint_limits.yaml")
             .planning_scene_monitor(
                 publish_robot_description=False,
@@ -77,25 +76,6 @@ def generate_launch_description() -> LaunchDescription:
             arguments=["--ros-args", "--log-level", "info"],
         )
         ld.add_action(move_group_node)
-
-    start_rviz_cmd = Node(
-    package='rviz2',
-    executable='rviz2',
-    arguments=['-d', os.path.join(get_package_share_directory('nav2_bringup'), 'rviz', 'leo_cnt_nav2_moveit.rviz'), '--ros-args', '--log-level', 'warn'],
-    output='screen',
-    parameters=[
-        moveit_config.robot_description,
-        moveit_config.robot_description_semantic,
-        moveit_config.planning_pipelines,
-        moveit_config.robot_description_kinematics,
-        moveit_config.joint_limits,
-    ],
-    remappings=[
-        ('/tf', 'tf'),
-        ('/tf_static', 'tf_static'),
-    ]
-    )
-    ld.add_action(start_rviz_cmd)
 
     # === ADD ARGUMENTS ===
     ld.add_action(namespace_arg)

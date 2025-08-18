@@ -68,11 +68,9 @@ def generate_launch_description() -> LaunchDescription:
         params = yaml.safe_load(file)
         namespace = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('namespace', '')
         robot_name = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('robot_name', 'x500')
-        use_robot_description = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_robot_description', True)
-        use_robot_tf_pub = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_robot_state_pub', True)
-        use_simple_rviz = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simple_rviz', False)
+        use_rviz = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_rviz', True)
         rviz_config_file = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('rviz_config_file', 'leo_cnt_nav2_moveit.rviz')
-        use_perception_pipeline = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_perception_pipeline', True)
+        use_movegroup_launch = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_movegroup_launch', True)
         slam = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('slam', False)
         use_simulator = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simulator', False)
         headless = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('headless', False)
@@ -81,34 +79,32 @@ def generate_launch_description() -> LaunchDescription:
     # === ROBOT DESCRIPTION ===
     urdf_file = os.path.join(get_package_share_directory(robot_name + '_description'), 'urdf', robot_name + '.urdf')
     robot_description = Command(['xacro ', urdf_file])
-    if use_robot_description:
-        start_robot_state_publisher_cmd = Node(
-                package='robot_state_publisher',
-                executable='robot_state_publisher',
-                name='robot_state_publisher',
-                output='screen',
-                parameters=[
-                    {'robot_description': robot_description}
-                ],
-        )
-        ld.add_action(start_robot_state_publisher_cmd)
+    start_robot_state_publisher_cmd = Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            parameters=[
+                {'robot_description': robot_description}
+            ],
+    )
+    ld.add_action(start_robot_state_publisher_cmd)
 
-    # === ROBOT STATE PUBLISHER ===
-    # TODO: Specifica robot state publisher custom
-    if use_robot_tf_pub:
-        start_robot_tf_publisher_cmd = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(drone_bringup_dir, 'launch', 'tf_tree_init_depth.launch.py')),
-            launch_arguments={
-            # TODO: Modificare namespace gz_drone_bringup
-            'namespace': "", 
-        }.items(),
-        )
-        ld.add_action(start_robot_tf_publisher_cmd)
+    # === JOINT STATE PUBLISHER ===
+    # TODO: Specifica che è joint state publisher custom e crea implementazione standard
+    start_robot_tf_publisher_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(drone_bringup_dir, 'launch', 'tf_tree_init_depth.launch.py')),
+        launch_arguments={
+        # TODO: Modificare namespace gz_drone_bringup
+        'namespace': "", 
+    }.items(),
+    )
+    ld.add_action(start_robot_tf_publisher_cmd)
 
     # TODO: Lancia rviz2 da qui e non perception pipeline
     # === RVIZ ===
-    if use_simple_rviz:
+    if use_rviz:
         rviz_cmd = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir, 'rviz_launch.py')),
             launch_arguments={
@@ -118,12 +114,12 @@ def generate_launch_description() -> LaunchDescription:
         )
         ld.add_action(rviz_cmd)
 
-    # === PERCEPTION PIPELINE ===
-    # Include il launch file dedicato alla perception
-    if use_perception_pipeline:
-        perception_pipeline_cmd = IncludeLaunchDescription(
+    # === MOVEGROUP ===
+    # TODO: Creare pacchetto nav2_movegroup (pacchetto omnicomprensivo di perception e planner)
+    if use_movegroup_launch:
+        movegroup_cmd = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(bringup_dir, 'launch', 'perception_pipeline.launch.py')
+                os.path.join(bringup_dir, 'launch', 'movegroup_launch.py')
             ),
             launch_arguments={
                 'namespace': namespace,
@@ -132,7 +128,7 @@ def generate_launch_description() -> LaunchDescription:
                 'moveit_config_package': robot_name + '_moveit_config',
             }.items(),
         )
-        ld.add_action(perception_pipeline_cmd)
+        ld.add_action(movegroup_cmd)
 
     # # === NAV2 BRINGUP ===
     # # TODO: Aggiungi tutti gli argomenti
