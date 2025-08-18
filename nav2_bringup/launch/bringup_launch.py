@@ -1,23 +1,8 @@
-# Copyright (c) 2018 Intel Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import (DeclareLaunchArgument, GroupAction, IncludeLaunchDescription,
-                            SetEnvironmentVariable)
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -30,9 +15,11 @@ def generate_launch_description() -> LaunchDescription:
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
     launch_dir = os.path.join(bringup_dir, 'launch')
+    planner_dir = get_package_share_directory('x500_trajectory_planner')
 
     # Create the launch configuration variables
     namespace = LaunchConfiguration('namespace')
+    robot_name = LaunchConfiguration('robot_name')
     slam = LaunchConfiguration('slam')
     map_yaml_file = LaunchConfiguration('map')
     keepout_mask_yaml_file = LaunchConfiguration('keepout_mask')
@@ -72,6 +59,12 @@ def generate_launch_description() -> LaunchDescription:
 
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace', default_value='', description='Top-level namespace'
+    )
+
+    declare_robot_name_cmd = DeclareLaunchArgument(
+        'robot_name',
+        default_value='x500',
+        description='Robot name for description package'
     )
 
     declare_slam_cmd = DeclareLaunchArgument(
@@ -186,7 +179,6 @@ def generate_launch_description() -> LaunchDescription:
             #         'use_sim_time': use_sim_time,
             #         'params_file': params_file,
             #         'use_respawn': use_respawn,
-            #         'container_name': 'nav2_container',
             #     }.items(),
             # ),
 
@@ -202,25 +194,49 @@ def generate_launch_description() -> LaunchDescription:
             #         'use_sim_time': use_sim_time,
             #         'params_file': params_file,
             #         'use_respawn': use_respawn,
-            #         'container_name': 'nav2_container',
             #     }.items(),
             # ),
 
+            # === PLANNER ===
+            # TODO: Creare pacchetto nav2_movegroup (pacchetto omnicomprensivo di perception e planner)
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(bringup_dir, 'launch', 'movegroup_launch.py')
+                ),
+                launch_arguments={
+                    'namespace': namespace,
+                    'robot_name': robot_name,
+                    'use_sim_time': str(use_sim_time),
+                    'moveit_config_package': [robot_name, '_moveit_config'],
+                }.items(),
+            ),
+
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(planner_dir, 'launch', 'x500_planning_service.launch.py')
+                ),
+                launch_arguments={
+                    'namespace': namespace,
+                    'robot_name': robot_name,
+                    'use_sim_time': str(use_sim_time),
+                }.items(),
+            ),
+
             # RUNNING: navigation_launch.py
-            # IncludeLaunchDescription(
-            #     PythonLaunchDescriptionSource(
-            #         os.path.join(launch_dir, 'navigation_launch.py')
-            #     ),
-            #     launch_arguments={
-            #         'namespace': namespace,
-            #         'use_sim_time': use_sim_time,
-            #         'autostart': autostart,
-            #         'graph': graph_filepath,
-            #         'params_file': params_file,
-            #         'use_respawn': use_respawn,
-            #         'container_name': 'nav2_container',
-            #     }.items(),
-            # ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(launch_dir, 'navigation_launch.py')
+                ),
+                launch_arguments={
+                    'namespace': namespace,
+                    'robot_name' : robot_name,
+                    'use_sim_time': use_sim_time,
+                    'autostart': autostart,
+                    'graph': graph_filepath,
+                    'params_file': params_file,
+                    'use_respawn': use_respawn,
+                }.items(),
+            ),
         ]
     )
 
@@ -232,6 +248,7 @@ def generate_launch_description() -> LaunchDescription:
 
     # Declare the launch options
     ld.add_action(declare_namespace_cmd)
+    ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_slam_cmd)
     ld.add_action(declare_map_yaml_cmd)
     ld.add_action(declare_keepout_mask_yaml_cmd)

@@ -4,11 +4,11 @@ import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription,
-                            RegisterEventHandler)
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler
 from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, Command
+from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 
 
@@ -67,17 +67,17 @@ def generate_launch_description() -> LaunchDescription:
     with open(param_file, 'r') as file:
         params = yaml.safe_load(file)
         namespace = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('namespace', '')
+        use_sim_time = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_sim_time', False)
         robot_name = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('robot_name', 'x500')
         use_rviz = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_rviz', True)
         rviz_config_file = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('rviz_config_file', 'leo_cnt_nav2_moveit.rviz')
-        use_movegroup_launch = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_movegroup_launch', True)
         slam = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('slam', False)
         use_simulator = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_simulator', False)
         headless = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('headless', False)
-        use_sim_time = params.get('nav2_launcher', {}).get('ros__parameters', {}).get('use_sim_time', False)
+
 
     # === ROBOT DESCRIPTION ===
-    urdf_file = os.path.join(get_package_share_directory(robot_name + '_description'), 'urdf', robot_name + '.urdf')
+    urdf_file = PathJoinSubstitution([FindPackageShare([robot_name, '_description']), 'urdf', [robot_name, '.urdf']])
     robot_description = Command(['xacro ', urdf_file])
     start_robot_state_publisher_cmd = Node(
             package='robot_state_publisher',
@@ -114,37 +114,22 @@ def generate_launch_description() -> LaunchDescription:
         )
         ld.add_action(rviz_cmd)
 
-    # === MOVEGROUP ===
-    # TODO: Creare pacchetto nav2_movegroup (pacchetto omnicomprensivo di perception e planner)
-    if use_movegroup_launch:
-        movegroup_cmd = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(bringup_dir, 'launch', 'movegroup_launch.py')
-            ),
-            launch_arguments={
-                'namespace': namespace,
-                'robot_name': robot_name,
-                'use_sim_time': str(use_sim_time),
-                'moveit_config_package': robot_name + '_moveit_config',
-            }.items(),
-        )
-        ld.add_action(movegroup_cmd)
-
-    # # === NAV2 BRINGUP ===
-    # # TODO: Aggiungi tutti gli argomenti
-    # bringup_cmd = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
-    #     launch_arguments={
-    #         'namespace': namespace,
-    #         # 'slam': slam,
-    #         # 'map': map_yaml_file,
-    #         'use_sim_time': str(use_sim_time),
-    #         'params_file': params_file,
-    #         'use_keepout_zones': 'False',
-    #         'use_speed_zones': 'False',
-    #     }.items(),
-    # )
-    # ld.add_action(bringup_cmd)
+    # === NAV2 BRINGUP ===
+    # TODO: Aggiungi tutti gli argomenti
+    bringup_cmd = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
+        launch_arguments={
+            'namespace': namespace,
+            'robot_name' : robot_name,
+            # 'slam': slam,
+            # 'map': map_yaml_file,
+            'use_sim_time': str(use_sim_time),
+            'params_file': params_file,
+            'use_keepout_zones': 'False',
+            'use_speed_zones': 'False',
+        }.items(),
+    )
+    ld.add_action(bringup_cmd)
 
     # TODO: Modifica per caricare mondo custom
     # === SIMULATION ===

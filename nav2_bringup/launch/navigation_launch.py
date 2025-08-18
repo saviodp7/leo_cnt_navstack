@@ -1,25 +1,12 @@
-# Copyright (c) 2018 Intel Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, SetParameter
 from launch_ros.descriptions import ParameterFile
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from nav2_common.launch import RewrittenYaml
 
 
@@ -27,6 +14,7 @@ def generate_launch_description() -> LaunchDescription:
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
     namespace = LaunchConfiguration('namespace')
+    robot_name = LaunchConfiguration('robot_name')
     use_sim_time = LaunchConfiguration('use_sim_time')
     autostart = LaunchConfiguration('autostart')
     params_file = LaunchConfiguration('params_file')
@@ -36,7 +24,7 @@ def generate_launch_description() -> LaunchDescription:
     lifecycle_nodes = [
         'controller_server',
         # 'smoother_server',
-        'planner_server',
+        # 'planner_server',
         # 'route_server',
         # 'behavior_server',
         # 'velocity_smoother',
@@ -68,6 +56,10 @@ def generate_launch_description() -> LaunchDescription:
 
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace', default_value='', description='Top-level namespace'
+    )
+
+    declare_robot_name_cmd = DeclareLaunchArgument(
+        'robot_name', default_value='x500', description='Name of the robot'
     )
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
@@ -127,16 +119,15 @@ def generate_launch_description() -> LaunchDescription:
             #     remappings=remappings,
             # ),
 
-            # TODO: Implementare planner
+            # TODO: Modificare nome creando wrapper
             Node(
-                package='nav2_planner',
-                executable='planner_server',
-                name='planner_server',
+                package='x500_trajectory_planner',
+                executable='x500_planning_service_node',
+                name='x500_planner',
                 output='screen',
-                respawn=use_respawn,
-                respawn_delay=2.0,
                 parameters=[configured_params],
                 arguments=['--ros-args', '--log-level', log_level],
+                emulate_tty=True,
                 remappings=remappings,
             ),
 
@@ -224,7 +215,7 @@ def generate_launch_description() -> LaunchDescription:
             #     executable='opennav_docking',
             #     name='docking_server',
             #     output='screen',
-            #     respawn=use_respawn,
+            #     respawn=use_respawn,    
             #     respawn_delay=2.0,
             #     parameters=[configured_params],
             #     arguments=['--ros-args', '--log-level', log_level],
@@ -243,7 +234,7 @@ def generate_launch_description() -> LaunchDescription:
         ],
     )
 
-     # Create the launch description and populate
+    # Create the launch description and populate
     ld = LaunchDescription()
 
     # Set environment variables
@@ -251,6 +242,7 @@ def generate_launch_description() -> LaunchDescription:
 
     # Declare the launch options
     ld.add_action(declare_namespace_cmd)
+    ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
