@@ -6,7 +6,6 @@ find_package(geometry_msgs REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
 find_package(nav2_common REQUIRED)
 find_package(nav2_core REQUIRED)
-# find_package(nav2_costmap_2d REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(nav2_util REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -16,6 +15,8 @@ find_package(rclcpp_components REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(x500_trajectory_planner REQUIRED)
 
 nav2_package()
 
@@ -25,34 +26,39 @@ set(library_name ${executable_name}_core)
 add_library(${library_name} SHARED
   src/planner_server.cpp
 )
+
 target_include_directories(${library_name}
   PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
-target_link_libraries(${library_name} PUBLIC
-  ${geometry_msgs_TARGETS}
-  nav2_core::nav2_core
-  # nav2_costmap_2d::nav2_costmap_2d_core
-  ${nav2_msgs_TARGETS}
-  nav2_util::nav2_util_core
-  ${nav_msgs_TARGETS}
-  pluginlib::pluginlib
-  rclcpp::rclcpp
-  rclcpp_lifecycle::rclcpp_lifecycle
-  ${rcl_interfaces_TARGETS}
-  tf2_ros::tf2_ros
-)
-target_link_libraries(${library_name} PRIVATE
-  ${lifecycle_msgs_TARGETS}
-  rclcpp_components::component
-  tf2::tf2
+
+ament_target_dependencies(${library_name}
+  geometry_msgs
+  lifecycle_msgs
+  nav2_core
+  nav2_msgs
+  nav2_util
+  nav_msgs
+  pluginlib
+  rclcpp
+  rclcpp_components
+  rclcpp_lifecycle
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  x500_trajectory_planner
 )
 
 add_executable(${executable_name}
   src/main.cpp
 )
-target_link_libraries(${executable_name} PRIVATE ${library_name} rclcpp::rclcpp)
+
+ament_target_dependencies(${executable_name}
+  rclcpp
+)
+
+target_link_libraries(${executable_name} ${library_name})
 
 rclcpp_components_register_nodes(${library_name} "nav2_planner::PlannerServer")
 
@@ -75,15 +81,20 @@ ament_export_include_directories(include/${PROJECT_NAME})
 ament_export_libraries(${library_name})
 ament_export_dependencies(
   geometry_msgs
+  lifecycle_msgs
   nav2_core
-  # nav2_costmap_2d
   nav2_msgs
   nav2_util
   nav_msgs
   pluginlib
   rclcpp
+  rclcpp_components
   rclcpp_lifecycle
+  tf2
   tf2_ros
+  tf2_geometry_msgs
+  x500_trajectory_planner
 )
 ament_export_targets(${library_name})
+
 ament_package()

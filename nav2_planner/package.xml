@@ -23,6 +23,7 @@
   <depend>rclcpp_lifecycle</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
+  <depend>x500_trajectory_planner</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_lint_common</test_depend>

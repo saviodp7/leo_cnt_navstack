@@ -107,7 +107,7 @@ def generate_launch_description() -> LaunchDescription:
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time',
-        default_value='false',
+        default_value='False',
         description='Use simulation (Gazebo) clock if true',
     )
 
@@ -222,7 +222,6 @@ def generate_launch_description() -> LaunchDescription:
                 }.items(),
             ),
 
-            # RUNNING: navigation_launch.py
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(launch_dir, 'navigation_launch.py')

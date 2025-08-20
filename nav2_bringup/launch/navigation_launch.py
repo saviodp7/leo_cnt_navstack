@@ -24,7 +24,7 @@ def generate_launch_description() -> LaunchDescription:
     lifecycle_nodes = [
         'controller_server',
         # 'smoother_server',
-        # 'planner_server',
+        'planner_server',
         # 'route_server',
         # 'behavior_server',
         # 'velocity_smoother',
@@ -62,9 +62,10 @@ def generate_launch_description() -> LaunchDescription:
         'robot_name', default_value='x500', description='Name of the robot'
     )
 
+    # TODO: Aggiungi settaggio
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time',
-        default_value='false',
+        default_value='False',
         description='Use simulation (Gazebo) clock if true',
     )
 
@@ -92,7 +93,6 @@ def generate_launch_description() -> LaunchDescription:
 
     load_nodes = GroupAction(
         actions=[
-            SetParameter('use_sim_time', use_sim_time),
 
             # RUNNING: controller_server.cpp
             Node(
@@ -119,16 +119,15 @@ def generate_launch_description() -> LaunchDescription:
             #     remappings=remappings,
             # ),
 
-            # TODO: Modificare nome creando wrapper
             Node(
-                package='x500_trajectory_planner',
-                executable='x500_planning_service_node',
-                name='x500_planner',
+                package='nav2_planner',
+                executable='planner_server',
+                name='planner_server',
                 output='screen',
+                respawn=use_respawn,
+                respawn_delay=2.0,
                 parameters=[configured_params],
                 arguments=['--ros-args', '--log-level', log_level],
-                emulate_tty=True,
-                remappings=remappings,
             ),
 
             # TODO: Implementare route server
