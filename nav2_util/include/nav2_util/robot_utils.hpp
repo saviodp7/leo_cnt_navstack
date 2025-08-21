@@ -24,6 +24,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "tf2/time.hpp"
 #include "tf2/transform_datatypes.hpp"
 #include "tf2_ros/buffer.h"

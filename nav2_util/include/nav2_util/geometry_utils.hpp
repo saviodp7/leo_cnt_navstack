@@ -176,7 +176,7 @@ inline double calculate_path_length(const nav_msgs::msg::Path & path, size_t sta
   }
   double path_length = 0.0;
   for (size_t idx = start_index; idx < path.poses.size() - 1; ++idx) {
-    path_length += euclidean_distance(path.poses[idx].pose, path.poses[idx + 1].pose);
+    path_length += euclidean_distance(path.poses[idx].pose, path.poses[idx + 1].pose, true);
   }
   return path_length;
 }

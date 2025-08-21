@@ -161,44 +161,6 @@ void PlannerServer::getPreemptedGoalIfRequested(
   }
 }
 
-// TODO: Ricavare posa iniziale per planning da punto A a B (ricavarla qui con publishers e inviarla a Moveit2)
-// template<typename T>
-// bool PlannerServer::getStartPose(
-//   typename std::shared_ptr<const typename T::Goal> goal,
-//   geometry_msgs::msg::PoseStamped & start)
-// {
-//   if (goal->use_start) {
-//     start = goal->start;
-//   } else if (!costmap_ros_->getRobotPose(start)) {
-//     return false;
-//   }
-//   return true;
-// }
-
-// bool PlannerServer::getCurrentRobotPose(geometry_msgs::msg::PoseStamped & pose)
-// {
-//   // TODO: Implementare usando TF2 per ottenere la posa corrente del robot
-//   // Esempio di implementazione:
-//   /*
-//   try {
-//     auto transform = tf_->lookupTransform("map", "base_link", tf2::TimePointZero);
-//     pose.header.frame_id = "map";
-//     pose.header.stamp = get_clock()->now();
-//     pose.pose.position.x = transform.transform.translation.x;
-//     pose.pose.position.y = transform.transform.translation.y;
-//     pose.pose.position.z = transform.transform.translation.z;
-//     pose.pose.orientation = transform.transform.rotation;
-//     return true;
-//   } catch (const tf2::TransformException & ex) {
-//     RCLCPP_ERROR(get_logger(), "Failed to get robot pose: %s", ex.what());
-//     return false;
-//   }
-//   */
-  
-//   RCLCPP_WARN(get_logger(), "getCurrentRobotPose() not implemented yet!");
-//   return false;
-// }
-
 void
 PlannerServer::computePlan()
 {
@@ -224,22 +186,11 @@ PlannerServer::computePlan()
       return;
     }
 
-    // TODO: Ricavare posa iniziale
-    // // Use start pose if provided otherwise use current robot pose
-    // if (!getStartPose<ActionToPose>(goal, start)) {
-    //   throw nav2_core::PlannerTFError("Unable to get start pose");
-    // }
-
     // Prepare service request
     auto request = std::make_shared<x500_trajectory_planner::srv::X500PlanningService::Request>();
     request->target_pose = goal->goal.pose;
     request->planning_time = 10.0;  // TODO: Make this configurable
     request->planning_attempts = 3; // TODO: Make this configurable
-
-    // TODO: Aggiungere logger ricavando la posa iniziale
-    // RCLCPP_INFO(get_logger(), "Requesting plan from [%.2f, %.2f, %.2f] to [%.2f, %.2f, %.2f]",
-    //             start_pose.pose.position.x, start_pose.pose.position.y, start_pose.pose.position.z,
-    //             request->target_pose.position.x, request->target_pose.position.y, request->target_pose.position.z);
 
     // Send async request with timeout
     auto future = planning_client_->async_send_request(request);
