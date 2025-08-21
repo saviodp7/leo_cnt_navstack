@@ -57,7 +57,6 @@ BtNavigator::~BtNavigator()
 {
 }
 
-// NOTE: Alla configurazione del BtNavigator vengono instanziati i navigators che poi sono gestiti coi loro metodi
 nav2_util::CallbackReturn
 BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
 {
@@ -68,7 +67,6 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
     get_node_base_interface(), get_node_timers_interface());
   tf_->setCreateTimerInterface(timer_interface);
   tf_->setUsingDedicatedThread(true);
-  // NOTE: Tf2 listener
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_, this, false);
 
   global_frame_ = get_parameter("global_frame").as_string();
@@ -99,7 +97,6 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
 
   // Navigator defaults
   const std::vector<std::string> default_navigator_ids = {
-    // RUNNING: Modifica navigator navigate_to_pose
     "navigate_to_pose"
     // "navigate_through_poses"
   };
@@ -121,7 +118,6 @@ BtNavigator::on_configure(const rclcpp_lifecycle::State & state)
     }
   }
 
-  // TEST: Controllo corretto caricamento plugins
   // Load navigator plugins
   for (size_t i = 0; i != navigator_ids.size(); i++) {
     try {
