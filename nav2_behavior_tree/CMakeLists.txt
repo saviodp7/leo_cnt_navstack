@@ -44,8 +44,6 @@ target_link_libraries(${library_name} PUBLIC
   tf2_ros::tf2_ros
 )
 
-
-# TODO: Aggiungere plugin Navigazione 3d al Makefile
 add_library(nav2_compute_path_to_pose_action_bt_node SHARED plugins/action/compute_path_to_pose_action.cpp)
 list(APPEND plugin_libs nav2_compute_path_to_pose_action_bt_node)
 

@@ -5,7 +5,7 @@
   nav2_behavior_tree package.
 -->
 
-<!-- TODO: Aggiungere Action nodes necessari --> 
+<!-- TODO: Rivedi Action nodes --> 
 <root BTCPP_format="4">
   <TreeNodesModel>
     <!-- ############################### ACTION NODES ################################# -->
