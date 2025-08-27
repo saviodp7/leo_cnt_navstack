@@ -38,13 +38,10 @@ target_include_directories(${library_name}
 )
 target_link_libraries(${library_name} PUBLIC
   ${geometry_msgs_TARGETS}
+  angles::angles
   nav2_core::nav2_core
-  # nav2_costmap_2d::nav2_costmap_2d_core
   ${nav2_msgs_TARGETS}
   nav2_util::nav2_util_core
-  # ${nav_2d_msgs_TARGETS}
-  # nav_2d_utils::conversions
-  # nav_2d_utils::tf_help
   pluginlib::pluginlib
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
@@ -70,25 +67,6 @@ target_link_libraries(${executable_name} PRIVATE
   ${library_name}
 )
 
-add_library(simple_progress_checker SHARED plugins/simple_progress_checker.cpp)
-target_include_directories(simple_progress_checker
-  PUBLIC
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-)
-target_link_libraries(simple_progress_checker PUBLIC
-  ${geometry_msgs_TARGETS}
-  nav2_core::nav2_core
-  rclcpp::rclcpp
-  rclcpp_lifecycle::rclcpp_lifecycle
-  ${rcl_interfaces_TARGETS}
-)
-target_link_libraries(simple_progress_checker PRIVATE
-  nav2_util::nav2_util_core
-  # nav_2d_utils::conversions
-  pluginlib::pluginlib
-)
-
 add_library(pose_progress_checker SHARED plugins/pose_progress_checker.cpp)
 target_include_directories(pose_progress_checker
   PUBLIC
@@ -100,7 +78,6 @@ target_link_libraries(pose_progress_checker PUBLIC
   rclcpp::rclcpp
   rclcpp_lifecycle::rclcpp_lifecycle
   ${rcl_interfaces_TARGETS}
-  simple_progress_checker
 )
 target_link_libraries(pose_progress_checker PRIVATE
   angles::angles
@@ -183,7 +160,7 @@ endif()
 
 rclcpp_components_register_nodes(${library_name} "nav2_controller::ControllerServer")
 
-install(TARGETS simple_progress_checker position_goal_checker pose_progress_checker simple_goal_checker stopped_goal_checker ${library_name}
+install(TARGETS position_goal_checker pose_progress_checker simple_goal_checker stopped_goal_checker ${library_name}
   EXPORT ${library_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -199,7 +176,7 @@ install(DIRECTORY include/
 )
 
 ament_export_include_directories(include/${PROJECT_NAME})
-ament_export_libraries(simple_progress_checker
+ament_export_libraries(
   pose_progress_checker
   simple_goal_checker
   stopped_goal_checker
@@ -208,11 +185,8 @@ ament_export_libraries(simple_progress_checker
 ament_export_dependencies(
   geometry_msgs
   nav2_core
-  # nav2_costmap_2d
   nav2_msgs
   nav2_util
-  # nav_2d_msgs
-  # nav_2d_utils
   pluginlib
   rclcpp
   rclcpp_lifecycle

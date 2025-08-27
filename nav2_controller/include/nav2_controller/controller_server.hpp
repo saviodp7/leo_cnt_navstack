@@ -21,15 +21,15 @@
 #include <unordered_map>
 #include <vector>
 #include <mutex>
+#include <utility>
+#include <optional>
+#include "tf2/utils.h"
+#include "angles/angles.h"
 
 #include "nav2_core/controller.hpp"
-#include "nav2_core/progress_checker.hpp"
-#include "nav2_core/goal_checker.hpp"
-// #include "nav2_costmap_2d/costmap_2d_ros.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "nav2_msgs/action/follow_path.hpp"
 #include "nav2_msgs/msg/speed_limit.hpp"
-// #include "nav_2d_utils/odom_subscriber.hpp"
 #include "nav2_util/lifecycle_node.hpp"
 #include "nav2_util/simple_action_server.hpp"
 #include "nav2_util/robot_utils.hpp"
@@ -38,12 +38,12 @@
 #include "pluginlib/class_list_macros.hpp"
 /// 
 #include "px4_msgs/msg/trajectory_setpoint.hpp"
+#include <geometry_msgs/msg/pose_stamped.hpp>
 ///
 
 namespace nav2_controller
 {
 
-class ProgressChecker;
 /**
  * @class nav2_controller::ControllerServer
  * @brief This class hosts variety of plugins of different algorithms to
@@ -54,7 +54,6 @@ class ControllerServer : public nav2_util::LifecycleNode
 public:
   using ControllerMap = std::unordered_map<std::string, nav2_core::Controller::Ptr>;
   using GoalCheckerMap = std::unordered_map<std::string, nav2_core::GoalChecker::Ptr>;
-  using ProgressCheckerMap = std::unordered_map<std::string, nav2_core::ProgressChecker::Ptr>;
   rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr waypoint_pub_;
 
   /**
@@ -130,47 +129,28 @@ protected:
    */
   void computeControl();
 
-//   /**
-//    * @brief Find the valid controller ID name for the given request
-//    *
-//    * @param c_name The requested controller name
-//    * @param name Reference to the name to use for control if any valid available
-//    * @return bool Whether it found a valid controller to use
-//    */
-  // bool findControllerId(const std::string & c_name, std::string & name);
+  /**
+   * @brief Find the valid goal checker ID name for the specified parameter
+   *
+   * @param c_name The goal checker name
+   * @param name Reference to the name to use for goal checking if any valid available
+   * @return bool Whether it found a valid goal checker to use
+   */
+  bool findGoalCheckerId(const std::string & c_name, std::string & name);
 
-//   /**
-//    * @brief Find the valid goal checker ID name for the specified parameter
-//    *
-//    * @param c_name The goal checker name
-//    * @param name Reference to the name to use for goal checking if any valid available
-//    * @return bool Whether it found a valid goal checker to use
-//    */
-//   bool findGoalCheckerId(const std::string & c_name, std::string & name);
+    /**
+     * @brief Converts Nav2 path to timed trajectory with ENU->NED coordinate transformation
+     * @param path Nav2 path in ENU coordinates
+     * @throws nav2_core::InvalidPath if path is empty
+     */
+    void generateTimedTrajectory(const nav_msgs::msg::Path& path);
 
-//   /**
-//    * @brief Find the valid progress checker ID name for the specified parameter
-//    *
-//    * @param c_name The progress checker name
-//    * @param name Reference to the name to use for progress checking if any valid available
-//    * @return bool Whether it found a valid progress checker to use
-//    */
-//   bool findProgressCheckerId(const std::string & c_name, std::string & name);
-
-//   /**
-//    * @brief Assigns path to controller
-//    * @param path Path received from action server
-//    */
-//   void setPlannerPath(const nav_msgs::msg::Path & path);
-//   /**
-//    * @brief Calculates velocity and publishes to "cmd_vel" topic
-//    */
-//   void computeAndPublishVelocity();
-//   /**
-//    * @brief Calls setPlannerPath method with an updated path received from
-//    * action server
-//    */
-//   void updateGlobalPath();
+    /**
+     * @brief Gets current waypoint based on timestamp
+     * @return Current waypoint to execute or nullopt if trajectory completed
+     */
+    std::optional<geometry_msgs::msg::PoseStamped> getCurrentWaypoint();
+    
 //   /**
 //    * @brief Calls velocity publisher to publish the velocity on "cmd_vel" topic
 //    * @param velocity Twist velocity to be published
@@ -180,15 +160,15 @@ protected:
 //    * @brief Calls velocity publisher to publish zero velocity
 //    */
 //   void publishZeroVelocity();
-//   /**
-//    * @brief Called on goal exit
-//    */
+  /**
+   * @brief Called on goal exit
+   */
   void onGoalExit();
-//   /**
-//    * @brief Checks if goal is reached
-//    * @return true or false
-//    */
-//   bool isGoalReached();
+  /**
+   * @brief Checks if goal is reached
+   * @return true or false
+   */
+  bool isGoalReached();
 //   /**
 //    * @brief Obtain current pose of the robot in costmap's frame
 //    * @param pose To store current pose of the robot
@@ -232,62 +212,37 @@ protected:
 //   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
   std::mutex dynamic_params_lock_;
 
-//   // The controller needs a costmap node
-//   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
-//   std::unique_ptr<nav2_util::NodeThread> costmap_thread_;
-
-//   // Publishers and subscribers
-//   std::unique_ptr<nav_2d_utils::OdomSubscriber> odom_sub_;
+  // Publishers and subscribers
+  // std::shared_ptr<nav2_util::OdomSmoother> odom_smoother_;
 //   std::unique_ptr<nav2_util::TwistPublisher> vel_publisher_;
-//   rclcpp::Subscription<nav2_msgs::msg::SpeedLimit>::SharedPtr speed_limit_sub_;
+  rclcpp::Subscription<nav2_msgs::msg::SpeedLimit>::SharedPtr speed_limit_sub_;
 
-//   // Progress Checker Plugin
-//   pluginlib::ClassLoader<nav2_core::ProgressChecker> progress_checker_loader_;
-//   ProgressCheckerMap progress_checkers_;
-//   std::vector<std::string> default_progress_checker_ids_;
-//   std::vector<std::string> default_progress_checker_types_;
-//   std::vector<std::string> progress_checker_ids_;
-//   std::vector<std::string> progress_checker_types_;
-//   std::string progress_checker_ids_concat_, current_progress_checker_;
-
-//   // Goal Checker Plugin
-//   pluginlib::ClassLoader<nav2_core::GoalChecker> goal_checker_loader_;
-//   GoalCheckerMap goal_checkers_;
-//   std::vector<std::string> default_goal_checker_ids_;
-//   std::vector<std::string> default_goal_checker_types_;
-//   std::vector<std::string> goal_checker_ids_;
-//   std::vector<std::string> goal_checker_types_;
-//   std::string goal_checker_ids_concat_, current_goal_checker_;
-
-//   // Controller Plugins
-  pluginlib::ClassLoader<nav2_core::Controller> lp_loader_;
-  ControllerMap controllers_;
-  std::vector<std::string> default_ids_;
-  std::vector<std::string> default_types_;
-  std::vector<std::string> controller_ids_;
-  std::vector<std::string> controller_types_;
-  std::string controller_ids_concat_, current_controller_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   double controller_frequency_;
   double min_x_velocity_threshold_;
   double min_y_velocity_threshold_;
   double min_theta_velocity_threshold_;
 
-//   double failure_tolerance_;
+  double failure_tolerance_;
   bool use_realtime_priority_ = false;
-//   bool publish_zero_velocity_;
-//   rclcpp::Duration costmap_update_timeout_;
+  bool publish_zero_velocity_;
 
-//   // Whether we've published the single controller warning yet
-//   geometry_msgs::msg::PoseStamped end_pose_;
+  // Whether we've published the single controller warning yet
+  geometry_msgs::msg::PoseStamped end_pose_;
 
-//   // Last time the controller generated a valid command
+  // Last time the controller generated a valid command
   rclcpp::Time last_valid_cmd_time_;
 
-//   // Current path container
-//   nav_msgs::msg::Path current_path_;
+  // Current path container
+  std::vector<std::pair<rclcpp::Time, geometry_msgs::msg::PoseStamped>> current_path_;
+  size_t current_waypoint_index_;
 
 // private:
+
+  double xyz_goal_tolerance_{0.1};
+  double yaw_goal_tolerance_{0.1};
 //   /**
 //     * @brief Callback for speed limiting messages
 //     * @param msg Shared pointer to nav2_msgs::msg::SpeedLimit

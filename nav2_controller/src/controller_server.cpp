@@ -1,17 +1,3 @@
-// Copyright (c) 2019 Intel Corporation
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #include <chrono>
 #include <vector>
 #include <memory>
@@ -21,8 +7,6 @@
 
 #include "lifecycle_msgs/msg/state.hpp"
 #include "nav2_core/controller_exceptions.hpp"
-// #include "nav_2d_utils/conversions.hpp"
-// #include "nav_2d_utils/tf_help.hpp"
 #include "nav2_util/node_utils.hpp"
 #include "nav2_util/geometry_utils.hpp"
 #include "nav2_controller/controller_server.hpp"
@@ -35,50 +19,20 @@ namespace nav2_controller
 {
 
 ControllerServer::ControllerServer(const rclcpp::NodeOptions & options)
-: nav2_util::LifecycleNode("controller_server", "", options),
-  // progress_checker_loader_("nav2_core", "nav2_core::ProgressChecker"),
-  // default_progress_checker_ids_{"progress_checker"},
-  // default_progress_checker_types_{"nav2_controller::SimpleProgressChecker"},
-  // goal_checker_loader_("nav2_core", "nav2_core::GoalChecker"),
-  // default_goal_checker_ids_{"goal_checker"},
-  // default_goal_checker_types_{"nav2_controller::SimpleGoalChecker"},
-  lp_loader_("nav2_core", "nav2_core::Controller"),
-  default_ids_{"FollowPath"}//,
-  // default_types_{"dwb_core::DWBLocalPlanner"},
-  // costmap_update_timeout_(300ms)
+: nav2_util::LifecycleNode("controller_server", "", options)
 {
   RCLCPP_INFO(get_logger(), "Creating controller server");
 
-  // TODO: Aggiunta parametri
   declare_parameter("controller_frequency", 20.0);
-
-  // declare_parameter("progress_checker_plugins", default_progress_checker_ids_);
-  // declare_parameter("goal_checker_plugins", default_goal_checker_ids_);
-  // declare_parameter("controller_plugins", default_ids_);
-  declare_parameter("min_x_velocity_threshold", rclcpp::ParameterValue(0.0001));
-  declare_parameter("min_y_velocity_threshold", rclcpp::ParameterValue(0.0001));
-  declare_parameter("min_theta_velocity_threshold", rclcpp::ParameterValue(0.0001));
-
+  // TODO: Implementa speed limit
   declare_parameter("speed_limit_topic", rclcpp::ParameterValue("speed_limit"));
-
   declare_parameter("failure_tolerance", rclcpp::ParameterValue(0.0));
   declare_parameter("use_realtime_priority", rclcpp::ParameterValue(false));
   declare_parameter("publish_zero_velocity", rclcpp::ParameterValue(true));
-  declare_parameter("costmap_update_timeout", 0.30);  // 300ms
-
-  // The costmap node is used in the implementation of the controller
-  // costmap_ros_ = std::make_shared<nav2_costmap_2d::Costmap2DROS>(
-  //   "local_costmap", std::string{get_namespace()},
-  //   get_parameter("use_sim_time").as_bool(), options);
 }
 
 ControllerServer::~ControllerServer()
 {
-  // TODO: Distruttore classe
-  // progress_checkers_.clear();
-  // goal_checkers_.clear();
-  // controllers_.clear();
-  // costmap_thread_.reset();
 }
 
 nav2_util::CallbackReturn
@@ -88,151 +42,17 @@ ControllerServer::on_configure(const rclcpp_lifecycle::State & state)
   waypoint_pub_ = this->create_publisher<px4_msgs::msg::TrajectorySetpoint>("/offboard/waypoint", 10);
   RCLCPP_INFO(get_logger(), "Configuring controller interface");
 
-  // TODO: Aggiunta checkers
-  // RCLCPP_INFO(get_logger(), "getting progress checker plugins..");
-  // get_parameter("progress_checker_plugins", progress_checker_ids_);
-  // if (progress_checker_ids_ == default_progress_checker_ids_) {
-  //   for (size_t i = 0; i < default_progress_checker_ids_.size(); ++i) {
-  //     nav2_util::declare_parameter_if_not_declared(
-  //       node, default_progress_checker_ids_[i] + ".plugin",
-  //       rclcpp::ParameterValue(default_progress_checker_types_[i]));
-  //   }
-  // }
-
-  // RCLCPP_INFO(get_logger(), "getting goal checker plugins..");
-  // get_parameter("goal_checker_plugins", goal_checker_ids_);
-  // if (goal_checker_ids_ == default_goal_checker_ids_) {
-  //   for (size_t i = 0; i < default_goal_checker_ids_.size(); ++i) {
-  //     nav2_util::declare_parameter_if_not_declared(
-  //       node, default_goal_checker_ids_[i] + ".plugin",
-  //       rclcpp::ParameterValue(default_goal_checker_types_[i]));
-  //   }
-  // }
-
-  // get_parameter("controller_plugins", controller_ids_);
-  // if (controller_ids_ == default_ids_) {
-  //   for (size_t i = 0; i < default_ids_.size(); ++i) {
-  //     // FIXME: Crasha
-  //     nav2_util::declare_parameter_if_not_declared(
-  //       node, default_ids_[i] + ".plugin",
-  //       rclcpp::ParameterValue(default_types_[i]));
-  //   }
-  // }
-
-  // controller_types_.resize(controller_ids_.size());
-  // goal_checker_types_.resize(goal_checker_ids_.size());
-  // progress_checker_types_.resize(progress_checker_ids_.size());
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   get_parameter("controller_frequency", controller_frequency_);
-  // get_parameter("min_x_velocity_threshold", min_x_velocity_threshold_);
-  // get_parameter("min_y_velocity_threshold", min_y_velocity_threshold_);
-  // get_parameter("min_theta_velocity_threshold", min_theta_velocity_threshold_);
   RCLCPP_INFO(get_logger(), "Controller frequency set to %.4fHz", controller_frequency_);
 
-  // std::string speed_limit_topic;
-  // get_parameter("speed_limit_topic", speed_limit_topic);
-  // get_parameter("failure_tolerance", failure_tolerance_);
+  std::string speed_limit_topic;
+  get_parameter("speed_limit_topic", speed_limit_topic);
+  get_parameter("failure_tolerance", failure_tolerance_);
   get_parameter("use_realtime_priority", use_realtime_priority_);
-  // get_parameter("publish_zero_velocity", publish_zero_velocity_);
 
-  // costmap_ros_->configure();
-  // // Launch a thread to run the costmap node
-  // costmap_thread_ = std::make_unique<nav2_util::NodeThread>(costmap_ros_);
-
-  // for (size_t i = 0; i != progress_checker_ids_.size(); i++) {
-  //   try {
-  //     progress_checker_types_[i] = nav2_util::get_plugin_type_param(
-  //       node, progress_checker_ids_[i]);
-  //     nav2_core::ProgressChecker::Ptr progress_checker =
-  //       progress_checker_loader_.createUniqueInstance(progress_checker_types_[i]);
-  //     RCLCPP_INFO(
-  //       get_logger(), "Created progress_checker : %s of type %s",
-  //       progress_checker_ids_[i].c_str(), progress_checker_types_[i].c_str());
-  //     progress_checker->initialize(node, progress_checker_ids_[i]);
-  //     progress_checkers_.insert({progress_checker_ids_[i], progress_checker});
-  //   } catch (const std::exception & ex) {
-  //     RCLCPP_FATAL(
-  //       get_logger(),
-  //       "Failed to create progress_checker. Exception: %s", ex.what());
-  //     on_cleanup(state);
-  //     return nav2_util::CallbackReturn::FAILURE;
-  //   }
-  // }
-
-  // for (size_t i = 0; i != progress_checker_ids_.size(); i++) {
-  //   progress_checker_ids_concat_ += progress_checker_ids_[i] + std::string(" ");
-  // }
-
-  // RCLCPP_INFO(
-  //   get_logger(),
-  //   "Controller Server has %s progress checkers available.", progress_checker_ids_concat_.c_str());
-
-  // for (size_t i = 0; i != goal_checker_ids_.size(); i++) {
-  //   try {
-  //     goal_checker_types_[i] = nav2_util::get_plugin_type_param(node, goal_checker_ids_[i]);
-  //     nav2_core::GoalChecker::Ptr goal_checker =
-  //       goal_checker_loader_.createUniqueInstance(goal_checker_types_[i]);
-  //     RCLCPP_INFO(
-  //       get_logger(), "Created goal checker : %s of type %s",
-  //       goal_checker_ids_[i].c_str(), goal_checker_types_[i].c_str());
-  //     goal_checker->initialize(node, goal_checker_ids_[i], costmap_ros_);
-  //     goal_checkers_.insert({goal_checker_ids_[i], goal_checker});
-  //   } catch (const pluginlib::PluginlibException & ex) {
-  //     RCLCPP_FATAL(
-  //       get_logger(),
-  //       "Failed to create goal checker. Exception: %s", ex.what());
-  //     on_cleanup(state);
-  //     return nav2_util::CallbackReturn::FAILURE;
-  //   }
-  // }
-
-  // for (size_t i = 0; i != goal_checker_ids_.size(); i++) {
-  //   goal_checker_ids_concat_ += goal_checker_ids_[i] + std::string(" ");
-  // }
-
-  // RCLCPP_INFO(
-  //   get_logger(),
-  //   "Controller Server has %s goal checkers available.", goal_checker_ids_concat_.c_str());
-
-
-  // RUNNING: Configurazione controllers
-  // FIXME: Crasha
-  // for (size_t i = 0; i != controller_ids_.size(); i++) {
-  //   try {
-  //     controller_types_[i] = nav2_util::get_plugin_type_param(node, controller_ids_[i]);
-  //     nav2_core::Controller::Ptr controller =
-  //       lp_loader_.createUniqueInstance(controller_types_[i]);
-  //     RCLCPP_INFO(
-  //       get_logger(), "Created controller : %s of type %s",
-  //       controller_ids_[i].c_str(), controller_types_[i].c_str());
-  //     controller->configure(
-  //       node, controller_ids_[i]//,
-  //       /*costmap_ros_->getTfBuffer(), costmap_ros_*/);
-  //     controllers_.insert({controller_ids_[i], controller});
-  //   } catch (const pluginlib::PluginlibException & ex) {
-  //     RCLCPP_FATAL(
-  //       get_logger(),
-  //       "Failed to create controller. Exception: %s", ex.what());
-  //     on_cleanup(state);
-  //     return nav2_util::CallbackReturn::FAILURE;
-  //   }
-  // }
-
-  // for (size_t i = 0; i != controller_ids_.size(); i++) {
-  //   controller_ids_concat_ += controller_ids_[i] + std::string(" ");
-  // }
-
-  // RCLCPP_INFO(get_logger(), "Controller Server has %s controllers available.", controller_ids_concat_.c_str());
-
-  // TODO: Integrazione odom dun e vel_publisher
-  // odom_sub_ = std::make_unique<nav_2d_utils::OdomSubscriber>(node);
-  // vel_publisher_ = std::make_unique<nav2_util::TwistPublisher>(node, "cmd_vel", 1);
-
-  // double costmap_update_timeout_dbl;
-  // get_parameter("costmap_update_timeout", costmap_update_timeout_dbl);
-  // costmap_update_timeout_ = rclcpp::Duration::from_seconds(costmap_update_timeout_dbl);
-
-  // NOTE: Creazione action server
   // // Create the action server that we implement with our followPath method
   // // This may throw due to real-time prioritization if user doesn't have real-time permissions
   try {
@@ -255,7 +75,7 @@ ControllerServer::on_configure(const rclcpp_lifecycle::State & state)
   }
 
   // TODO: Aggiunta speed limit
-  // // Set subscription to the speed limiting topic
+  // Set subscription to the speed limiting topic
   // speed_limit_sub_ = create_subscription<nav2_msgs::msg::SpeedLimit>(
   //   speed_limit_topic, rclcpp::QoS(10),
   //   std::bind(&ControllerServer::speedLimitCallback, this, std::placeholders::_1));
@@ -268,21 +88,8 @@ ControllerServer::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Activating");
 
-  // const auto costmap_ros_state = costmap_ros_->activate();
-  // if (costmap_ros_state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE) {
-  //   return nav2_util::CallbackReturn::FAILURE;
-  // }
-  // ControllerMap::iterator it;
-  // for (it = controllers_.begin(); it != controllers_.end(); ++it) {
-  //   it->second->activate();
-  // }
-  // vel_publisher_->on_activate();
   action_server_->activate();
-
   auto node = shared_from_this();
-  // // Add callback for dynamic parameters
-  // dyn_params_handler_ = node->add_on_set_parameters_callback(
-  //   std::bind(&ControllerServer::dynamicParametersCallback, this, _1));
 
   // create bond connection
   createBond();
@@ -296,25 +103,9 @@ ControllerServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
   RCLCPP_INFO(get_logger(), "Deactivating");
 
   action_server_->deactivate();
-  // ControllerMap::iterator it;
-  // for (it = controllers_.begin(); it != controllers_.end(); ++it) {
-  //   it->second->deactivate();
-  // }
-
-  // /*
-  //  * The costmap is also a lifecycle node, so it may have already fired on_deactivate
-  //  * via rcl preshutdown cb. Despite the rclcpp docs saying on_shutdown callbacks fire
-  //  * in the order added, the preshutdown callbacks clearly don't per se, due to using an
-  //  * unordered_set iteration. Once this issue is resolved, we can maybe make a stronger
-  //  * ordering assumption: https://github.com/ros2/rclcpp/issues/2096
-  //  */
-  // costmap_ros_->deactivate();
-
-  // publishZeroVelocity();
+  
+  // publishZeroVelocity(); // TODO: Svilluppare mandando posizione corrente come setpoint
   // vel_publisher_->on_deactivate();
-
-  // remove_on_set_parameters_callback(dyn_params_handler_.get());
-  // dyn_params_handler_.reset();
 
   // destroy bond connection
   destroyBond();
@@ -327,23 +118,11 @@ ControllerServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");
 
-  // // Cleanup the helper classes
-  // ControllerMap::iterator it;
-  // for (it = controllers_.begin(); it != controllers_.end(); ++it) {
-  //   it->second->cleanup();
-  // }
-  // controllers_.clear();
-
-  // goal_checkers_.clear();
-  // progress_checkers_.clear();
-
-  // costmap_ros_->cleanup();
-
-
   // // Release any allocated resources
   action_server_.reset();
+  tf_listener_.reset();
+  tf_buffer_.reset();
   // odom_sub_.reset();
-  // costmap_thread_.reset();
   // vel_publisher_.reset();
   // speed_limit_sub_.reset();
 
@@ -357,84 +136,6 @@ ControllerServer::on_shutdown(const rclcpp_lifecycle::State &)
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
-// bool ControllerServer::findControllerId(
-//   const std::string & c_name,
-//   std::string & current_controller)
-// {
-//   if (controllers_.find(c_name) == controllers_.end()) {
-//     if (controllers_.size() == 1 && c_name.empty()) {
-//       RCLCPP_WARN_ONCE(
-//         get_logger(), "No controller was specified in action call."
-//         " Server will use only plugin loaded %s. "
-//         "This warning will appear once.", controller_ids_concat_.c_str());
-//       current_controller = controllers_.begin()->first;
-//     } else {
-//       RCLCPP_ERROR(
-//         get_logger(), "FollowPath called with controller name %s, "
-//         "which does not exist. Available controllers are: %s.",
-//         c_name.c_str(), controller_ids_concat_.c_str());
-//       return false;
-//     }
-//   } else {
-//     RCLCPP_DEBUG(get_logger(), "Selected controller: %s.", c_name.c_str());
-//     current_controller = c_name;
-//   }
-
-//   return true;
-// }
-
-// bool ControllerServer::findGoalCheckerId(
-//   const std::string & c_name,
-//   std::string & current_goal_checker)
-// {
-//   if (goal_checkers_.find(c_name) == goal_checkers_.end()) {
-//     if (goal_checkers_.size() == 1 && c_name.empty()) {
-//       RCLCPP_WARN_ONCE(
-//         get_logger(), "No goal checker was specified in parameter 'current_goal_checker'."
-//         " Server will use only plugin loaded %s. "
-//         "This warning will appear once.", goal_checker_ids_concat_.c_str());
-//       current_goal_checker = goal_checkers_.begin()->first;
-//     } else {
-//       RCLCPP_ERROR(
-//         get_logger(), "FollowPath called with goal_checker name %s in parameter"
-//         " 'current_goal_checker', which does not exist. Available goal checkers are: %s.",
-//         c_name.c_str(), goal_checker_ids_concat_.c_str());
-//       return false;
-//     }
-//   } else {
-//     RCLCPP_DEBUG(get_logger(), "Selected goal checker: %s.", c_name.c_str());
-//     current_goal_checker = c_name;
-//   }
-
-//   return true;
-// }
-
-// bool ControllerServer::findProgressCheckerId(
-//   const std::string & c_name,
-//   std::string & current_progress_checker)
-// {
-//   if (progress_checkers_.find(c_name) == progress_checkers_.end()) {
-//     if (progress_checkers_.size() == 1 && c_name.empty()) {
-//       RCLCPP_WARN_ONCE(
-//         get_logger(), "No progress checker was specified in parameter 'current_progress_checker'."
-//         " Server will use only plugin loaded %s. "
-//         "This warning will appear once.", progress_checker_ids_concat_.c_str());
-//       current_progress_checker = progress_checkers_.begin()->first;
-//     } else {
-//       RCLCPP_ERROR(
-//         get_logger(), "FollowPath called with progress_checker name %s in parameter"
-//         " 'current_progress_checker', which does not exist. Available progress checkers are: %s.",
-//         c_name.c_str(), progress_checker_ids_concat_.c_str());
-//       return false;
-//     }
-//   } else {
-//     RCLCPP_DEBUG(get_logger(), "Selected progress checker: %s.", c_name.c_str());
-//     current_progress_checker = c_name;
-//   }
-
-//   return true;
-// }
-
 void ControllerServer::computeControl()
 {
   std::lock_guard<std::mutex> lock(dynamic_params_lock_);
@@ -442,130 +143,57 @@ void ControllerServer::computeControl()
 
   try {
     auto goal = action_server_->get_current_goal();
-    if (!goal) return;  //  goal would be nullptr if action_server_ is deactivate.
+    if (!goal) return;
 
-    // std::string c_name = goal->controller_id;
-    // std::string current_controller;
-    // if (findControllerId(c_name, current_controller)) {
-    //   current_controller_ = current_controller;
-    // } else {
-    //   throw nav2_core::InvalidController("Failed to find controller name: " + c_name);
-    // }
-
-  // TODO: Caricamento checker e planner
-  //   std::string gc_name = goal->goal_checker_id;
-  //   std::string current_goal_checker;
-  //   if (findGoalCheckerId(gc_name, current_goal_checker)) {
-  //     current_goal_checker_ = current_goal_checker;
-  //   } else {
-  //     throw nav2_core::ControllerException("Failed to find goal checker name: " + gc_name);
-  //   }
-
-  //   std::string pc_name = goal->progress_checker_id;
-  //   std::string current_progress_checker;
-  //   if (findProgressCheckerId(pc_name, current_progress_checker)) {
-  //     current_progress_checker_ = current_progress_checker;
-  //   } else {
-  //     throw nav2_core::ControllerException("Failed to find progress checker name: " + pc_name);
-  //   }
-
-  //   setPlannerPath(goal->path);
-  //   progress_checkers_[current_progress_checker_]->reset();
+    generateTimedTrajectory(goal->path);
 
     last_valid_cmd_time_ = now();
     rclcpp::WallRate loop_rate(controller_frequency_);
+    
     while (rclcpp::ok()) {
       auto start_time = this->now();
-
       if (action_server_ == nullptr || !action_server_->is_server_active()) {
         RCLCPP_DEBUG(get_logger(), "Action server unavailable or inactive. Stopping.");
         return;
       }
-
-      // if (action_server_->is_cancel_requested()) {
-      //   if (controllers_[current_controller_]->cancel()) {
-      //     RCLCPP_INFO(get_logger(), "Cancellation was successful. Stopping the robot.");
-      //     action_server_->terminate_all();
-      //     onGoalExit();
-      //     return;
-      //   } else {
-      //     RCLCPP_INFO_THROTTLE(
-      //       get_logger(), *get_clock(), 1000, "Waiting for the controller to finish cancellation");
-      //   }
-      // }
-
-  //     // Don't compute a trajectory until costmap is valid (after clear costmap)
-  //     rclcpp::Rate r(100);
-  //     auto waiting_start = now();
-  //     while (!costmap_ros_->isCurrent()) {
-  //       if (now() - waiting_start > costmap_update_timeout_) {
-  //         throw nav2_core::ControllerTimedOut("Costmap timed out waiting for update");
-  //       }
-  //       r.sleep();
-  //     }
-
-  //     updateGlobalPath();
-
-  //     computeAndPublishVelocity();
-
-      // RUNNING:
-      // Pubblicazione su topic PX4 della prima posa del Path ricevuto
-      const auto& pose = goal->path.poses[0].pose;
-      px4_msgs::msg::TrajectorySetpoint setpoint;
-      setpoint.position[0] = pose.position.x;
-      setpoint.position[1] = pose.position.y;
-      setpoint.position[2] = pose.position.z;
-      setpoint.yaw = 0;
-
-      waypoint_pub_->publish(setpoint);
-      RCLCPP_INFO(get_logger(), "📍 Setpoint published x=%.2f y=%.2f z=%.2f yaw=%.2f", setpoint.position[0], setpoint.position[1], setpoint.position[2], setpoint.yaw);
-
-      // TODO: Implementazione check goal reached
-      //     if (isGoalReached()) {
-      if (true){
+      if (action_server_->is_cancel_requested()) {
+        action_server_->terminate_all();
+        return;
+      }
+      // Obtain current waypoint from time
+      auto current_waypoint = getCurrentWaypoint();
+      if (current_waypoint.has_value()) {
+          const auto& pose = current_waypoint->pose;
+          // Extract yaw from quaternion
+          double yaw = tf2::getYaw(pose.orientation);
+          
+          px4_msgs::msg::TrajectorySetpoint setpoint;
+          setpoint.position[0] = pose.position.x;
+          setpoint.position[1] = pose.position.y;
+          setpoint.position[2] = pose.position.z;
+          setpoint.yaw = static_cast<float>(yaw);
+          waypoint_pub_->publish(setpoint);
+          RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "📍 Setpoint published x=%.2f y=%.2f z=%.2f yaw=%.2f", 
+              setpoint.position[0], setpoint.position[1], setpoint.position[2], setpoint.yaw);
+      }
+      if (isGoalReached()) {
         RCLCPP_INFO(get_logger(), "Reached the goal!");
+        current_path_.clear();
         break;
       }
-    // STOP RUNNING
-
       auto cycle_duration = this->now() - start_time;
       if (!loop_rate.sleep()) {
         RCLCPP_WARN(
-          get_logger(),
-          "Control loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz.",
-          controller_frequency_, 1 / cycle_duration.seconds());
+            get_logger(),
+            "Control loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz.",
+            controller_frequency_, 1 / cycle_duration.seconds());
       }
     }
-  }
-    catch (nav2_core::InvalidController & e) {
-    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
-    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-    result->error_code = Action::Result::INVALID_CONTROLLER;
-    result->error_msg = e.what();
-    action_server_->terminate_current(result);
-    return;
   } catch (nav2_core::ControllerTFError & e) {
     RCLCPP_ERROR(this->get_logger(), "%s", e.what());
     onGoalExit();
     std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
     result->error_code = Action::Result::TF_ERROR;
-    result->error_msg = e.what();
-    action_server_->terminate_current(result);
-    return;
-  } catch (nav2_core::NoValidControl & e) {
-    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
-    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-    result->error_code = Action::Result::NO_VALID_CONTROL;
-    result->error_msg = e.what();
-    action_server_->terminate_current(result);
-    return;
-  } catch (nav2_core::FailedToMakeProgress & e) {
-    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
-    std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-    result->error_code = Action::Result::FAILED_TO_MAKE_PROGRESS;
     result->error_msg = e.what();
     action_server_->terminate_current(result);
     return;
@@ -619,26 +247,62 @@ void ControllerServer::computeControl()
   action_server_->succeeded_current();
 }
 
-// void ControllerServer::setPlannerPath(const nav_msgs::msg::Path & path)
-// {
-//   RCLCPP_DEBUG(
-//     get_logger(),
-//     "Providing path to the controller %s", current_controller_.c_str());
-//   if (path.poses.empty()) {
-//     throw nav2_core::InvalidPath("Path is empty.");
-//   }
-//   controllers_[current_controller_]->setPlan(path);
+void ControllerServer::generateTimedTrajectory(const nav_msgs::msg::Path & path)
+{
+    RCLCPP_DEBUG(get_logger(), "Generating timed trajectory from path");
+    if (path.poses.empty()) {
+        throw nav2_core::InvalidPath("Path is empty.");
+    }
+    
+    // reset current path
+    current_path_.clear();
+    current_waypoint_index_ = 0;
+    current_path_.reserve(path.poses.size());
+    
+    std::vector<geometry_msgs::msg::PoseStamped> path_poses = path.poses;
+    
+    // Timed trajectory generation
+    rclcpp::Time start_time = now();
+    
+    for (size_t i = 0; i < path_poses.size(); ++i) {
+        rclcpp::Time waypoint_time = start_time + rclcpp::Duration::from_seconds(static_cast<double>(i));
+        path_poses[i].header.stamp = waypoint_time;
+        current_path_.emplace_back(waypoint_time, path_poses[i]);
+    }
+    
+    RCLCPP_INFO(get_logger(),
+        "✅ Generated %zu timed waypoints over %zu seconds",
+        current_path_.size(),
+        current_path_.size() - 1);
+}
 
-//   end_pose_ = path.poses.back();
-//   end_pose_.header.frame_id = path.header.frame_id;
-//   goal_checkers_[current_goal_checker_]->reset();
 
-//   RCLCPP_DEBUG(
-//     get_logger(), "Path end point is (%.2f, %.2f)",
-//     end_pose_.pose.position.x, end_pose_.pose.position.y);
+std::optional<geometry_msgs::msg::PoseStamped> ControllerServer::getCurrentWaypoint()
+{
+    if (current_path_.empty()) {
+        return std::nullopt;
+    }
+    rclcpp::Time current_time = now();
+    
+    // Find current waypoint or increment idx
+    while (current_waypoint_index_ < current_path_.size()) {
+        const auto& [waypoint_time, pose] = current_path_[current_waypoint_index_];
+        if (current_time < waypoint_time) {
+            return pose;
+        }
+        current_waypoint_index_++;
+    }
+    
+    // Se abbiamo superato tutti i waypoints, ritorna l'ultimo disponibile
+    // Il goal checker si occuperà di verificare se siamo arrivati
+    if (!current_path_.empty()) {
+        return current_path_.back().second;
+    }
+    
+    return std::nullopt;
+}
 
-//   current_path_ = path;
-// }
+
 
 // void ControllerServer::computeAndPublishVelocity()
 // {
@@ -647,11 +311,7 @@ void ControllerServer::computeControl()
 //   if (!getRobotPose(pose)) {
 //     throw nav2_core::ControllerTFError("Failed to obtain robot pose");
 //   }
-
-//   if (!progress_checkers_[current_progress_checker_]->check(pose)) {
-//     throw nav2_core::FailedToMakeProgress("Failed to make progress");
-//   }
-
+// TODO: Implementare calcolo Twist
 //   nav_2d_msgs::msg::Twist2D twist = getThresholdedTwist(odom_sub_->getTwist());
 
 //   geometry_msgs::msg::TwistStamped cmd_vel_2d;
@@ -661,7 +321,6 @@ void ControllerServer::computeControl()
 //       controllers_[current_controller_]->computeVelocityCommands(
 //       pose,
 //       nav_2d_utils::twist2Dto3D(twist),
-//       goal_checkers_[current_goal_checker_].get());
 //     last_valid_cmd_time_ = now();
 //     cmd_vel_2d.header.frame_id = costmap_ros_->getBaseFrameID();
 //     cmd_vel_2d.header.stamp = last_valid_cmd_time_;
@@ -727,175 +386,66 @@ void ControllerServer::computeControl()
 //   action_server_->publish_feedback(feedback);
 // }
 
-// void ControllerServer::updateGlobalPath()
-// {
-//   if (action_server_->is_preempt_requested()) {
-//     RCLCPP_INFO(get_logger(), "Passing new path to controller.");
-//     auto goal = action_server_->accept_pending_goal();
-//     std::string current_controller;
-//     if (findControllerId(goal->controller_id, current_controller)) {
-//       current_controller_ = current_controller;
-//     } else {
-//       std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-//       result->error_code = Action::Result::INVALID_CONTROLLER;
-//       result->error_msg = "Terminating action, invalid controller " +
-//         goal->controller_id + " requested.";
-//       action_server_->terminate_current(result);
-//       return;
-//     }
-//     std::string current_goal_checker;
-//     if (findGoalCheckerId(goal->goal_checker_id, current_goal_checker)) {
-//       current_goal_checker_ = current_goal_checker;
-//     } else {
-//       std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-//       result->error_code = Action::Result::INVALID_CONTROLLER;
-//       result->error_msg = "Terminating action, invalid goal checker " +
-//         goal->goal_checker_id + " requested.";
-//       action_server_->terminate_current(result);
-//       return;
-//     }
-//     std::string current_progress_checker;
-//     if (findProgressCheckerId(goal->progress_checker_id, current_progress_checker)) {
-//       if (current_progress_checker_ != current_progress_checker) {
-//         RCLCPP_INFO(
-//           get_logger(), "Change of progress checker %s requested, resetting it",
-//           goal->progress_checker_id.c_str());
-//         current_progress_checker_ = current_progress_checker;
-//         progress_checkers_[current_progress_checker_]->reset();
-//       }
-//     } else {
-//       std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
-//       result->error_code = Action::Result::INVALID_CONTROLLER;
-//       result->error_msg = "Terminating action, invalid progress checker " +
-//         goal->progress_checker_id + " requested.";
-//       action_server_->terminate_current(result);
-//       return;
-//     }
-//     setPlannerPath(goal->path);
-//   }
-// }
-
-// void ControllerServer::publishVelocity(const geometry_msgs::msg::TwistStamped & velocity)
-// {
-//   auto cmd_vel = std::make_unique<geometry_msgs::msg::TwistStamped>(velocity);
-//   if (!nav2_util::validateTwist(cmd_vel->twist)) {
-//     RCLCPP_ERROR(get_logger(), "Velocity message contains NaNs or Infs! Ignoring as invalid!");
-//     return;
-//   }
-//   if (vel_publisher_->is_activated() && vel_publisher_->get_subscription_count() > 0) {
-//     vel_publisher_->publish(std::move(cmd_vel));
-//   }
-// }
-
-// void ControllerServer::publishZeroVelocity()
-// {
-//   geometry_msgs::msg::TwistStamped velocity;
-//   velocity.twist.angular.x = 0;
-//   velocity.twist.angular.y = 0;
-//   velocity.twist.angular.z = 0;
-//   velocity.twist.linear.x = 0;
-//   velocity.twist.linear.y = 0;
-//   velocity.twist.linear.z = 0;
-//   velocity.header.frame_id = costmap_ros_->getBaseFrameID();
-//   velocity.header.stamp = now();
-//   publishVelocity(velocity);
-// }
-
 void ControllerServer::onGoalExit()
 {
-  // if (publish_zero_velocity_) {
-  //   publishZeroVelocity();
-  // }
-
-  // Reset the state of the controllers after the task has ended
-  // ControllerMap::iterator it;
-  // for (it = controllers_.begin(); it != controllers_.end(); ++it) {
-  //   it->second->reset();
-  // }
+  //TODO: Pubblicare posizione attuale come target
 }
 
-// bool ControllerServer::isGoalReached()
-// {
-//   geometry_msgs::msg::PoseStamped pose;
+bool ControllerServer::isGoalReached()
+{
+  geometry_msgs::msg::PoseStamped current_pose;
+  if (!tf_buffer_) {
+      RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 5000,
+                            "TF buffer not initialized");
+      return false;
+  }
+  
+  if (!nav2_util::getCurrentPose(current_pose, *tf_buffer_, "map", "base_link", 0.1)) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "❌ Failed to get current pose for goal checking");
+      return false;
+  }
+  
+  if (current_path_.empty()) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "❌ Current path is empty");
+      return false;
+  }
+  
+  const auto& [goal_timestamp, goal_pose_stamped] = current_path_.back();
+  const auto& query_pose = current_pose.pose;
+  const auto& goal_pose = goal_pose_stamped.pose;
+  
+  double dx = query_pose.position.x - goal_pose.position.x;
+  double dy = query_pose.position.y - goal_pose.position.y;
+  double dz = query_pose.position.z - goal_pose.position.z;
+  
+  double distance_sq = dx * dx + dy * dy + dz * dz;
+  double distance = std::sqrt(distance_sq);
+  
+  RCLCPP_DEBUG_THROTTLE(get_logger(), *get_clock(), 2000,
+                        "XYZ distance to goal: %.3f m (tolerance: %.3f m)", 
+                        distance, xyz_goal_tolerance_);
+  
+  if (distance_sq > xyz_goal_tolerance_) {
+      return false;
+  }
+  
+  // We are in position, let's check the orientation
+  double current_yaw = tf2::getYaw(query_pose.orientation);
+  double goal_yaw = tf2::getYaw(goal_pose.orientation);
+  double dyaw = angles::shortest_angular_distance(current_yaw, goal_yaw);
+  
+  RCLCPP_DEBUG_THROTTLE(get_logger(), *get_clock(), 2000,
+                        "Yaw difference: %.3f rad (%.1f deg), tolerance: %.3f rad (%.1f deg)", 
+                        dyaw, dyaw * 180.0 / M_PI, yaw_goal_tolerance_, yaw_goal_tolerance_ * 180.0 / M_PI);
+  bool goal_reached = fabs(dyaw) <= yaw_goal_tolerance_;
+  
+  return goal_reached;
+}
 
-//   if (!getRobotPose(pose)) {
-//     return false;
-//   }
-
-//   nav_2d_msgs::msg::Twist2D twist = getThresholdedTwist(odom_sub_->getTwist());
-//   geometry_msgs::msg::Twist velocity = nav_2d_utils::twist2Dto3D(twist);
-
-//   geometry_msgs::msg::PoseStamped transformed_end_pose;
-//   rclcpp::Duration tolerance(rclcpp::Duration::from_seconds(costmap_ros_->getTransformTolerance()));
-//   nav_2d_utils::transformPose(
-//     costmap_ros_->getTfBuffer(), costmap_ros_->getGlobalFrameID(),
-//     end_pose_, transformed_end_pose, tolerance);
-
-//   return goal_checkers_[current_goal_checker_]->isGoalReached(
-//     pose.pose, transformed_end_pose.pose,
-//     velocity);
-// }
-
-// bool ControllerServer::getRobotPose(geometry_msgs::msg::PoseStamped & pose)
-// {
-//   geometry_msgs::msg::PoseStamped current_pose;
-//   if (!costmap_ros_->getRobotPose(current_pose)) {
-//     return false;
-//   }
-//   pose = current_pose;
-//   return true;
-// }
 
 // void ControllerServer::speedLimitCallback(const nav2_msgs::msg::SpeedLimit::SharedPtr msg)
 // {
-//   ControllerMap::iterator it;
-//   for (it = controllers_.begin(); it != controllers_.end(); ++it) {
-//     it->second->setSpeedLimit(msg->speed_limit, msg->percentage);
-//   }
-// }
-
-// rcl_interfaces::msg::SetParametersResult
-// ControllerServer::dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters)
-// {
-//   rcl_interfaces::msg::SetParametersResult result;
-
-//   for (auto parameter : parameters) {
-//     const auto & param_type = parameter.get_type();
-//     const auto & param_name = parameter.get_name();
-
-//     // If we are trying to change the parameter of a plugin we can just skip it at this point
-//     // as they handle parameter changes themselves and don't need to lock the mutex
-//     if (param_name.find('.') != std::string::npos) {
-//       continue;
-//     }
-
-//     if (!dynamic_params_lock_.try_lock()) {
-//       RCLCPP_WARN(
-//         get_logger(),
-//         "Unable to dynamically change Parameters while the controller is currently running");
-//       result.successful = false;
-//       result.reason =
-//         "Unable to dynamically change Parameters while the controller is currently running";
-//       return result;
-//     }
-
-//     if (param_type == ParameterType::PARAMETER_DOUBLE) {
-//       if (param_name == "min_x_velocity_threshold") {
-//         min_x_velocity_threshold_ = parameter.as_double();
-//       } else if (param_name == "min_y_velocity_threshold") {
-//         min_y_velocity_threshold_ = parameter.as_double();
-//       } else if (param_name == "min_theta_velocity_threshold") {
-//         min_theta_velocity_threshold_ = parameter.as_double();
-//       } else if (param_name == "failure_tolerance") {
-//         failure_tolerance_ = parameter.as_double();
-//       }
-//     }
-
-//     dynamic_params_lock_.unlock();
-//   }
-
-//   result.successful = true;
-//   return result;
+// // TODO: Settare limite velocità
 // }
 
 } // namespace nav2_controller
