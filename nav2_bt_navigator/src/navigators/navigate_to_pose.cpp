@@ -132,8 +132,8 @@ NavigateToPoseNavigator::goalCompleted(
 void
 NavigateToPoseNavigator::onLoop()
 {
-  // // action server feedback (pose, duration of task,
-  // // number of recoveries, and distance remaining to goal)
+  // action server feedback (pose, duration of task,
+  // number of recoveries, and distance remaining to goal)
   auto feedback_msg = std::make_shared<ActionT::Feedback>();
 
   geometry_msgs::msg::PoseStamped current_pose;

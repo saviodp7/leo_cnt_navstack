@@ -147,6 +147,17 @@ void ControllerServer::computeControl()
         action_server_->terminate_all();
         return;
       }
+      if (action_server_->is_preempt_requested()) {
+        RCLCPP_INFO(get_logger(), "🔄 Goal preemption requested - switching to new goal");
+        action_server_->accept_pending_goal();
+        goal = action_server_->get_current_goal();
+        if (!goal) return;
+        
+        current_path_.clear();
+        generateTimedTrajectory(goal->path);
+        last_valid_cmd_time_ = now();
+
+      }
       // Obtain current waypoint from time
       auto current_waypoint = getCurrentWaypoint();
       if (current_waypoint.has_value()) {
@@ -160,7 +171,7 @@ void ControllerServer::computeControl()
           setpoint.position[2] = pose.position.z;
           setpoint.yaw = static_cast<float>(yaw);
           waypoint_pub_->publish(setpoint);
-          RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "📍 Setpoint published x=%.2f y=%.2f z=%.2f yaw=%.2f", 
+          RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 2000, "📍 Setpoint published x=%.2f y=%.2f z=%.2f yaw=%.2f", 
               setpoint.position[0], setpoint.position[1], setpoint.position[2], setpoint.yaw);
       }
       if (isGoalReached()) {
@@ -240,7 +251,7 @@ void ControllerServer::generateTimedTrajectory(const nav_msgs::msg::Path & path)
     std::vector<geometry_msgs::msg::PoseStamped> path_poses = path.poses;
     
     // Timed trajectory generation with speed limit
-    rclcpp::Time start_time = now() + rclcpp::Duration::from_seconds(1.0);
+    rclcpp::Time start_time = now() + rclcpp::Duration::from_seconds(0.1);
     double accumulated_time = 0.0;
     double current_speed_limit = getSpeedLimit();
 
