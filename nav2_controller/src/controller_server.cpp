@@ -23,12 +23,8 @@ ControllerServer::ControllerServer(const rclcpp::NodeOptions & options)
 {
   RCLCPP_INFO(get_logger(), "Creating controller server");
 
-  declare_parameter("controller_frequency", 20.0);
-  // TODO: Implementa speed limit
+  declare_parameter("controller_frequency", 10.0);
   declare_parameter("speed_limit_topic", rclcpp::ParameterValue("speed_limit"));
-  declare_parameter("failure_tolerance", rclcpp::ParameterValue(0.0));
-  declare_parameter("use_realtime_priority", rclcpp::ParameterValue(false));
-  declare_parameter("publish_zero_velocity", rclcpp::ParameterValue(true));
 }
 
 ControllerServer::~ControllerServer()
@@ -50,11 +46,9 @@ ControllerServer::on_configure(const rclcpp_lifecycle::State & state)
 
   std::string speed_limit_topic;
   get_parameter("speed_limit_topic", speed_limit_topic);
-  get_parameter("failure_tolerance", failure_tolerance_);
-  get_parameter("use_realtime_priority", use_realtime_priority_);
 
-  // // Create the action server that we implement with our followPath method
-  // // This may throw due to real-time prioritization if user doesn't have real-time permissions
+  // Create the action server that we implement with our followPath method
+  // This may throw due to real-time prioritization if user doesn't have real-time permissions
   try {
     action_server_ = std::make_unique<ActionServer>(
       get_node_base_interface(),
@@ -74,11 +68,10 @@ ControllerServer::on_configure(const rclcpp_lifecycle::State & state)
     return nav2_util::CallbackReturn::FAILURE;
   }
 
-  // TODO: Aggiunta speed limit
   // Set subscription to the speed limiting topic
-  // speed_limit_sub_ = create_subscription<nav2_msgs::msg::SpeedLimit>(
-  //   speed_limit_topic, rclcpp::QoS(10),
-  //   std::bind(&ControllerServer::speedLimitCallback, this, std::placeholders::_1));
+  speed_limit_sub_ = create_subscription<nav2_msgs::msg::SpeedLimit>(
+    speed_limit_topic, rclcpp::QoS(10),
+    std::bind(&ControllerServer::speedLimitCallback, this, std::placeholders::_1));
 
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -103,9 +96,6 @@ ControllerServer::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
   RCLCPP_INFO(get_logger(), "Deactivating");
 
   action_server_->deactivate();
-  
-  // publishZeroVelocity(); // TODO: Svilluppare mandando posizione corrente come setpoint
-  // vel_publisher_->on_deactivate();
 
   // destroy bond connection
   destroyBond();
@@ -118,13 +108,11 @@ ControllerServer::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
 {
   RCLCPP_INFO(get_logger(), "Cleaning up");
 
-  // // Release any allocated resources
+  // Release any allocated resources
   action_server_.reset();
   tf_listener_.reset();
   tf_buffer_.reset();
-  // odom_sub_.reset();
-  // vel_publisher_.reset();
-  // speed_limit_sub_.reset();
+  speed_limit_sub_.reset();
 
   return nav2_util::CallbackReturn::SUCCESS;
 }
@@ -138,7 +126,6 @@ ControllerServer::on_shutdown(const rclcpp_lifecycle::State &)
 
 void ControllerServer::computeControl()
 {
-  std::lock_guard<std::mutex> lock(dynamic_params_lock_);
   RCLCPP_INFO(get_logger(), "Received a goal, begin computing control effort.");
 
   try {
@@ -191,7 +178,6 @@ void ControllerServer::computeControl()
     }
   } catch (nav2_core::ControllerTFError & e) {
     RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
     std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
     result->error_code = Action::Result::TF_ERROR;
     result->error_msg = e.what();
@@ -199,7 +185,6 @@ void ControllerServer::computeControl()
     return;
   } catch (nav2_core::PatienceExceeded & e) {
     RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
     std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
     result->error_code = Action::Result::PATIENCE_EXCEEDED;
     result->error_msg = e.what();
@@ -207,7 +192,6 @@ void ControllerServer::computeControl()
     return;
   } catch (nav2_core::InvalidPath & e) {
     RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
     std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
     result->error_code = Action::Result::INVALID_PATH;
     result->error_msg = e.what();
@@ -215,15 +199,12 @@ void ControllerServer::computeControl()
     return;
   } catch (nav2_core::ControllerTimedOut & e) {
     RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
     std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
     result->error_code = Action::Result::CONTROLLER_TIMED_OUT;
     result->error_msg = e.what();
     action_server_->terminate_current(result);
     return;
   } catch (nav2_core::ControllerException & e) {
-    RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
     std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
     result->error_code = Action::Result::UNKNOWN;
     result->error_msg = e.what();
@@ -232,7 +213,6 @@ void ControllerServer::computeControl()
   } 
   catch (std::exception & e) {
     RCLCPP_ERROR(this->get_logger(), "%s", e.what());
-    onGoalExit();
     std::shared_ptr<Action::Result> result = std::make_shared<Action::Result>();
     result->error_code = Action::Result::UNKNOWN;
     result->error_msg = e.what();
@@ -241,8 +221,6 @@ void ControllerServer::computeControl()
   }
 
   RCLCPP_DEBUG(get_logger(), "Controller succeeded, setting result");
-
-  onGoalExit();
 
   action_server_->succeeded_current();
 }
@@ -254,26 +232,54 @@ void ControllerServer::generateTimedTrajectory(const nav_msgs::msg::Path & path)
         throw nav2_core::InvalidPath("Path is empty.");
     }
     
-    // reset current path
+    // Reset current path
     current_path_.clear();
     current_waypoint_index_ = 0;
     current_path_.reserve(path.poses.size());
     
     std::vector<geometry_msgs::msg::PoseStamped> path_poses = path.poses;
     
-    // Timed trajectory generation
-    rclcpp::Time start_time = now();
-    
-    for (size_t i = 0; i < path_poses.size(); ++i) {
-        rclcpp::Time waypoint_time = start_time + rclcpp::Duration::from_seconds(static_cast<double>(i));
+    // Timed trajectory generation with speed limit
+    rclcpp::Time start_time = now() + rclcpp::Duration::from_seconds(1.0);
+    double accumulated_time = 0.0;
+    double current_speed_limit = getSpeedLimit();
+
+    RCLCPP_INFO(get_logger(), "Generating trajectory with speed limit: %.2f m/s", current_speed_limit);
+
+    // First waypoint at the start time
+    path_poses[0].header.stamp = start_time;
+    current_path_.emplace_back(start_time, path_poses[0]);
+   
+    // Compute waypoints timing
+    for (size_t i = 1; i < path_poses.size(); ++i) {
+        const auto& prev_pose = path_poses[i-1].pose;
+        const auto& curr_pose = path_poses[i].pose;
+        
+        // Compute 3D distance and duration
+        double dx = curr_pose.position.x - prev_pose.position.x;
+        double dy = curr_pose.position.y - prev_pose.position.y;
+        double dz = curr_pose.position.z - prev_pose.position.z;
+        double distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+        double segment_time = distance / current_speed_limit;
+        
+        // Minimum threshold
+        const double min_segment_time = 0.01; // 10ms minimum
+        segment_time = std::max(segment_time, min_segment_time);
+        accumulated_time += segment_time;
+        
+        // Set the timestamp
+        rclcpp::Time waypoint_time = start_time + rclcpp::Duration::from_seconds(accumulated_time);
         path_poses[i].header.stamp = waypoint_time;
         current_path_.emplace_back(waypoint_time, path_poses[i]);
+        
+        RCLCPP_DEBUG(get_logger(), 
+            "Waypoint %zu: distance=%.3fm, segment_time=%.3fs, total_time=%.3fs", 
+            i, distance, segment_time, accumulated_time);
     }
     
     RCLCPP_INFO(get_logger(),
-        "✅ Generated %zu timed waypoints over %zu seconds",
-        current_path_.size(),
-        current_path_.size() - 1);
+        "Generated %zu timed waypoints with total trajectory time: %.2f seconds (speed: %.2f m/s)",
+        current_path_.size(), accumulated_time, current_speed_limit);
 }
 
 
@@ -283,7 +289,6 @@ std::optional<geometry_msgs::msg::PoseStamped> ControllerServer::getCurrentWaypo
         return std::nullopt;
     }
     rclcpp::Time current_time = now();
-    
     // Find current waypoint or increment idx
     while (current_waypoint_index_ < current_path_.size()) {
         const auto& [waypoint_time, pose] = current_path_[current_waypoint_index_];
@@ -292,9 +297,6 @@ std::optional<geometry_msgs::msg::PoseStamped> ControllerServer::getCurrentWaypo
         }
         current_waypoint_index_++;
     }
-    
-    // Se abbiamo superato tutti i waypoints, ritorna l'ultimo disponibile
-    // Il goal checker si occuperà di verificare se siamo arrivati
     if (!current_path_.empty()) {
         return current_path_.back().second;
     }
@@ -302,64 +304,10 @@ std::optional<geometry_msgs::msg::PoseStamped> ControllerServer::getCurrentWaypo
     return std::nullopt;
 }
 
-
-
+// TODO: Pubblicazione feedback
 // void ControllerServer::computeAndPublishVelocity()
 // {
 //   geometry_msgs::msg::PoseStamped pose;
-
-//   if (!getRobotPose(pose)) {
-//     throw nav2_core::ControllerTFError("Failed to obtain robot pose");
-//   }
-// TODO: Implementare calcolo Twist
-//   nav_2d_msgs::msg::Twist2D twist = getThresholdedTwist(odom_sub_->getTwist());
-
-//   geometry_msgs::msg::TwistStamped cmd_vel_2d;
-
-//   try {
-//     cmd_vel_2d =
-//       controllers_[current_controller_]->computeVelocityCommands(
-//       pose,
-//       nav_2d_utils::twist2Dto3D(twist),
-//     last_valid_cmd_time_ = now();
-//     cmd_vel_2d.header.frame_id = costmap_ros_->getBaseFrameID();
-//     cmd_vel_2d.header.stamp = last_valid_cmd_time_;
-//     // Only no valid control exception types are valid to attempt to have control patience, as
-//     // other types will not be resolved with more attempts
-//   } catch (nav2_core::NoValidControl & e) {
-//     if (failure_tolerance_ > 0 || failure_tolerance_ == -1.0) {
-//       RCLCPP_WARN(this->get_logger(), "%s", e.what());
-//       cmd_vel_2d.twist.angular.x = 0;
-//       cmd_vel_2d.twist.angular.y = 0;
-//       cmd_vel_2d.twist.angular.z = 0;
-//       cmd_vel_2d.twist.linear.x = 0;
-//       cmd_vel_2d.twist.linear.y = 0;
-//       cmd_vel_2d.twist.linear.z = 0;
-//       cmd_vel_2d.header.frame_id = costmap_ros_->getBaseFrameID();
-//       cmd_vel_2d.header.stamp = now();
-//       if ((now() - last_valid_cmd_time_).seconds() > failure_tolerance_ &&
-//         failure_tolerance_ != -1.0)
-//       {
-//         throw nav2_core::PatienceExceeded("Controller patience exceeded");
-//       }
-//     } else {
-//       throw nav2_core::NoValidControl(e.what());
-//     }
-//   }
-
-//   RCLCPP_DEBUG(get_logger(), "Publishing velocity at time %.2f", now().seconds());
-//   publishVelocity(cmd_vel_2d);
-
-//   // Find the closest pose to current pose on global path
-//   geometry_msgs::msg::PoseStamped robot_pose_in_path_frame;
-//   rclcpp::Duration tolerance(rclcpp::Duration::from_seconds(costmap_ros_->getTransformTolerance()));
-//   if (!nav_2d_utils::transformPose(
-//           costmap_ros_->getTfBuffer(), current_path_.header.frame_id, pose,
-//           robot_pose_in_path_frame, tolerance))
-//   {
-//     throw nav2_core::ControllerTFError("Failed to transform robot pose to path frame");
-//   }
-
 //   std::shared_ptr<Action::Feedback> feedback = std::make_shared<Action::Feedback>();
 //   feedback->speed = std::hypot(cmd_vel_2d.twist.linear.x, cmd_vel_2d.twist.linear.y);
 
@@ -385,11 +333,6 @@ std::optional<geometry_msgs::msg::PoseStamped> ControllerServer::getCurrentWaypo
 //       closest_pose_idx);
 //   action_server_->publish_feedback(feedback);
 // }
-
-void ControllerServer::onGoalExit()
-{
-  //TODO: Pubblicare posizione attuale come target
-}
 
 bool ControllerServer::isGoalReached()
 {
@@ -442,11 +385,23 @@ bool ControllerServer::isGoalReached()
   return goal_reached;
 }
 
-
-// void ControllerServer::speedLimitCallback(const nav2_msgs::msg::SpeedLimit::SharedPtr msg)
-// {
-// // TODO: Settare limite velocità
-// }
+// TODO: Implementazione speed limit via percentuale della velocità massima
+void ControllerServer::speedLimitCallback(const nav2_msgs::msg::SpeedLimit::SharedPtr msg)
+{
+  // Check limit validity or use default
+  if (msg->speed_limit > 0.0) {
+    speed_limit_ = msg->speed_limit;
+    
+    RCLCPP_INFO(get_logger(), 
+        "Speed limit updated to: %.2f m/s",
+        getSpeedLimit());
+  }
+  else {
+    speed_limit_ = default_speed_limit_;
+    RCLCPP_WARN(get_logger(), 
+        "Received invalid speed limit: %.2f m/s, using default value: %.2f", msg->speed_limit, default_speed_limit_);
+  }
+}
 
 } // namespace nav2_controller
 

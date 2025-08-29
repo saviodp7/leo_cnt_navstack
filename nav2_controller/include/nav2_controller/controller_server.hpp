@@ -52,8 +52,8 @@ namespace nav2_controller
 class ControllerServer : public nav2_util::LifecycleNode
 {
 public:
+
   using ControllerMap = std::unordered_map<std::string, nav2_core::Controller::Ptr>;
-  using GoalCheckerMap = std::unordered_map<std::string, nav2_core::GoalChecker::Ptr>;
   rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr waypoint_pub_;
 
   /**
@@ -67,6 +67,7 @@ public:
   ~ControllerServer();
 
 protected:
+
   /**
    * @brief Configures controller parameters and member variables
    *
@@ -78,6 +79,7 @@ protected:
    * plugin
    */
   nav2_util::CallbackReturn on_configure(const rclcpp_lifecycle::State & state) override;
+
   /**
    * @brief Activates member variables
    *
@@ -87,6 +89,7 @@ protected:
    * @return Success or Failure
    */
   nav2_util::CallbackReturn on_activate(const rclcpp_lifecycle::State & state) override;
+
   /**
    * @brief Deactivates member variables
    *
@@ -96,6 +99,7 @@ protected:
    * @return Success or Failure
    */
   nav2_util::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state) override;
+
   /**
    * @brief Calls clean up states and resets member variables.
    *
@@ -105,6 +109,7 @@ protected:
    * @return Success or Failure
    */
   nav2_util::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state) override;
+
   /**
    * @brief Called when in Shutdown state
    * @param state LifeCycle Node's state
@@ -114,7 +119,6 @@ protected:
 
   using Action = nav2_msgs::action::FollowPath;
   using ActionServer = nav2_util::SimpleActionServer<Action>;
-
   // Our action server implements the FollowPath action
   std::unique_ptr<ActionServer> action_server_;
 
@@ -130,108 +134,42 @@ protected:
   void computeControl();
 
   /**
-   * @brief Find the valid goal checker ID name for the specified parameter
-   *
-   * @param c_name The goal checker name
-   * @param name Reference to the name to use for goal checking if any valid available
-   * @return bool Whether it found a valid goal checker to use
+   * @brief Converts Nav2 path to timed trajectory with ENU->NED coordinate transformation
+   * @param path Nav2 path in ENU coordinates
+   * @throws nav2_core::InvalidPath if path is empty
    */
-  bool findGoalCheckerId(const std::string & c_name, std::string & name);
+  void generateTimedTrajectory(const nav_msgs::msg::Path& path);
 
-    /**
-     * @brief Converts Nav2 path to timed trajectory with ENU->NED coordinate transformation
-     * @param path Nav2 path in ENU coordinates
-     * @throws nav2_core::InvalidPath if path is empty
-     */
-    void generateTimedTrajectory(const nav_msgs::msg::Path& path);
-
-    /**
-     * @brief Gets current waypoint based on timestamp
-     * @return Current waypoint to execute or nullopt if trajectory completed
-     */
-    std::optional<geometry_msgs::msg::PoseStamped> getCurrentWaypoint();
-    
-//   /**
-//    * @brief Calls velocity publisher to publish the velocity on "cmd_vel" topic
-//    * @param velocity Twist velocity to be published
-//    */
-//   void publishVelocity(const geometry_msgs::msg::TwistStamped & velocity);
-//   /**
-//    * @brief Calls velocity publisher to publish zero velocity
-//    */
-//   void publishZeroVelocity();
   /**
-   * @brief Called on goal exit
+   * @brief Gets current waypoint based on timestamp
+   * @return Current waypoint to execute or nullopt if trajectory completed
    */
-  void onGoalExit();
+  std::optional<geometry_msgs::msg::PoseStamped> getCurrentWaypoint();
+    
   /**
    * @brief Checks if goal is reached
    * @return true or false
    */
   bool isGoalReached();
-//   /**
-//    * @brief Obtain current pose of the robot in costmap's frame
-//    * @param pose To store current pose of the robot
-//    * @return true if able to obtain current pose of the robot, else false
-//    */
-//   bool getRobotPose(geometry_msgs::msg::PoseStamped & pose);
+  
+  double xyz_goal_tolerance_{0.1};
+  double yaw_goal_tolerance_{0.1};
 
-//   /**
-//    * @brief get the thresholded velocity
-//    * @param velocity The current velocity from odometry
-//    * @param threshold The minimum velocity to return non-zero
-//    * @return double velocity value
-//    */
-//   double getThresholdedVelocity(double velocity, double threshold)
-//   {
-//     return (std::abs(velocity) > threshold) ? velocity : 0.0;
-//   }
-
-//   /**
-//    * @brief get the thresholded Twist
-//    * @param Twist The current Twist from odometry
-//    * @return Twist Twist after thresholds applied
-//    */
-//   nav_2d_msgs::msg::Twist2D getThresholdedTwist(const nav_2d_msgs::msg::Twist2D & twist)
-//   {
-//     nav_2d_msgs::msg::Twist2D twist_thresh;
-//     twist_thresh.x = getThresholdedVelocity(twist.x, min_x_velocity_threshold_);
-//     twist_thresh.y = getThresholdedVelocity(twist.y, min_y_velocity_threshold_);
-//     twist_thresh.theta = getThresholdedVelocity(twist.theta, min_theta_velocity_threshold_);
-//     return twist_thresh;
-//   }
-
-//   /**
-//    * @brief Callback executed when a parameter change is detected
-//    * @param event ParameterEvent message
-//    */
-//   rcl_interfaces::msg::SetParametersResult
-//   dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
-
-//   // Dynamic parameters handler
-//   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
-  std::mutex dynamic_params_lock_;
-
-  // Publishers and subscribers
-  // std::shared_ptr<nav2_util::OdomSmoother> odom_smoother_;
-//   std::unique_ptr<nav2_util::TwistPublisher> vel_publisher_;
+  // Speed limit
   rclcpp::Subscription<nav2_msgs::msg::SpeedLimit>::SharedPtr speed_limit_sub_;
+  double speed_limit_{0.5};
+  double default_speed_limit_{0.5};
+    /**
+    * @brief Callback for speed limiting messages
+    * @param msg Shared pointer to nav2_msgs::msg::SpeedLimit
+    */
+  void speedLimitCallback(const nav2_msgs::msg::SpeedLimit::SharedPtr msg);
+  double getSpeedLimit() const { return speed_limit_; }
 
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   double controller_frequency_;
-  double min_x_velocity_threshold_;
-  double min_y_velocity_threshold_;
-  double min_theta_velocity_threshold_;
-
-  double failure_tolerance_;
-  bool use_realtime_priority_ = false;
-  bool publish_zero_velocity_;
-
-  // Whether we've published the single controller warning yet
-  geometry_msgs::msg::PoseStamped end_pose_;
-
   // Last time the controller generated a valid command
   rclcpp::Time last_valid_cmd_time_;
 
@@ -239,15 +177,6 @@ protected:
   std::vector<std::pair<rclcpp::Time, geometry_msgs::msg::PoseStamped>> current_path_;
   size_t current_waypoint_index_;
 
-// private:
-
-  double xyz_goal_tolerance_{0.1};
-  double yaw_goal_tolerance_{0.1};
-//   /**
-//     * @brief Callback for speed limiting messages
-//     * @param msg Shared pointer to nav2_msgs::msg::SpeedLimit
-//     */
-//   void speedLimitCallback(const nav2_msgs::msg::SpeedLimit::SharedPtr msg);
 };
 
 }  // namespace nav2_controller

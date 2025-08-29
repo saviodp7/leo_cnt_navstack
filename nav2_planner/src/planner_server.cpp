@@ -363,6 +363,28 @@ void PlannerServer::publishPlan(const nav_msgs::msg::Path & path)
   if (plan_publisher_->is_activated() && plan_publisher_->get_subscription_count() > 0) {
     auto msg = std::make_unique<nav_msgs::msg::Path>(path);
     plan_publisher_->publish(std::move(msg));
+
+    // Poses log
+    RCLCPP_DEBUG(get_logger(), "📊 Published path with %zu poses:", path.poses.size());
+    
+    for (size_t i = 0; i < path.poses.size(); ++i) {
+        const auto& pose_stamped = path.poses[i];
+        const auto& pos = pose_stamped.pose.position;
+        const auto& orient = pose_stamped.pose.orientation;
+
+        tf2::Quaternion tf_q(orient.x, orient.y, orient.z, orient.w);
+        double roll, pitch, yaw;
+        tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
+        
+        RCLCPP_DEBUG(get_logger(), 
+            "   [%3zu] pos=[%7.3f, %7.3f, %7.3f] "
+            "yaw=%6.1f°",
+            i,
+            pos.x, pos.y, pos.z,                           // Position XYZ
+            yaw * 180.0 / M_PI                             // Yaw in degrees
+        );
+    }
+
     RCLCPP_DEBUG(get_logger(), "Published path with %zu poses for visualization", path.poses.size());
   }
 }
